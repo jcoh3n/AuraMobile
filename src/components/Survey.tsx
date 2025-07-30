@@ -180,6 +180,17 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
     }
   };
 
+  // Fonction pour gérer le bouton retour (accueil ou question précédente)
+  const handleBackButton = () => {
+    if (navigation.history.length === 0) {
+      // Si on est sur la première question, retourner à l'écran de bienvenue
+      setCurrentStep('welcome');
+    } else {
+      // Sinon, revenir à la question précédente
+      handleGoBack();
+    }
+  };
+
   // Commencer le sondage (depuis l'écran de bienvenue)
   const startSurvey = () => {
     setCurrentStep('survey');
@@ -292,11 +303,11 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
     <View style={styles.container}>
       {/* Header avec bouton retour */}
       <View style={styles.header}>
-        {navigation.history.length > 0 && (
-          <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
-            <Text style={styles.backButtonText}>← Retour</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity style={styles.backButton} onPress={handleBackButton}>
+          <Text style={styles.backButtonText}>
+            {navigation.history.length === 0 ? '← Accueil' : '← Retour'}
+          </Text>
+        </TouchableOpacity>
         <Text style={styles.progressText}>
           Question {navigation.history.length + 1}
         </Text>
