@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Modal, ScrollView } from 'react-native';
-import { SurveyQuestion, SurveyOption } from '../types/survey';
 import { questionImages } from '../data/surveyQuestions';
+import { SurveyQuestion, SurveyOption } from '../types/survey';
 
 interface SingleChoiceQuestionProps {
   question: SurveyQuestion;
