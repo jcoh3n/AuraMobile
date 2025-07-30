@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, TextInput } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { surveyQuestions, surveyConfig } from '../data/surveyQuestions';
 import { saveSurveyResponse } from '../config/firebaseConfig';
 import { SurveyQuestion, SurveyAnswers, SurveyNavigation } from '../types/survey';
@@ -11,6 +12,9 @@ import CommuneQuestion from './CommuneQuestion';
 interface SurveyProps {
   onComplete?: () => void;
 }
+
+// Clé pour AsyncStorage
+const ENQUETEUR_STORAGE_KEY = '@surveyor_name';
 
 const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
   // État du sondage équivalent au Vue.js
@@ -26,11 +30,41 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingName, setIsLoadingName] = useState(true);
 
   // Trouver la question actuelle
   const currentQuestion = useMemo(() => {
     return surveyQuestions.find(q => q.id === navigation.currentQuestionId);
   }, [navigation.currentQuestionId]);
+
+  // Fonctions AsyncStorage pour la persistance du nom d'enquêteur
+  const loadSavedEnqueteur = async () => {
+    try {
+      const savedName = await AsyncStorage.getItem(ENQUETEUR_STORAGE_KEY);
+      if (savedName) {
+        setSavedEnqueteur(savedName);
+        setEnqueteurInput(savedName);
+        setCurrentStep('welcome'); // Aller directement à l'écran de bienvenue
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement du nom d\'enquêteur:', error);
+    } finally {
+      setIsLoadingName(false);
+    }
+  };
+
+  const saveEnqueteurToStorage = async (name: string) => {
+    try {
+      await AsyncStorage.setItem(ENQUETEUR_STORAGE_KEY, name);
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde du nom d\'enquêteur:', error);
+    }
+  };
+
+  // Charger le nom sauvegardé au démarrage
+  useEffect(() => {
+    loadSavedEnqueteur();
+  }, []);
 
   // Gérer la réponse à une question
   const handleAnswer = async (answer: any) => {
@@ -64,13 +98,33 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
   };
 
   // Fonction pour définir l'enquêteur (équivalent Vue.js)
-  const setEnqueteur = () => {
+  const setEnqueteur = async () => {
     if (enqueteurInput.trim() !== "") {
-      setSavedEnqueteur(enqueteurInput.trim());
+      const trimmedName = enqueteurInput.trim();
+      setSavedEnqueteur(trimmedName);
+      await saveEnqueteurToStorage(trimmedName); // Sauvegarder dans AsyncStorage
       setCurrentStep('welcome');
       setStartTime(new Date()); // Capture du temps de début
     } else {
       Alert.alert("Erreur", "Veuillez entrer le prénom de l'enquêteur.");
+    }
+  };
+
+  // Fonction pour changer/éditer le nom d'enquêteur
+  const changeEnqueteur = () => {
+    setCurrentStep('enqueteur');
+    setEnqueteurInput(savedEnqueteur); // Pré-remplir avec le nom actuel
+  };
+
+  // Fonction pour effacer complètement le nom sauvegardé (utile pour debug/admin)
+  const clearSavedEnqueteur = async () => {
+    try {
+      await AsyncStorage.removeItem(ENQUETEUR_STORAGE_KEY);
+      setSavedEnqueteur('');
+      setEnqueteurInput('');
+      setCurrentStep('enqueteur');
+    } catch (error) {
+      console.error('Erreur lors de la suppression du nom d\'enquêteur:', error);
     }
   };
 
@@ -130,13 +184,26 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
     setCurrentStep('survey');
   };
 
+  // Écran de chargement au démarrage
+  if (isLoadingName) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Chargement...</Text>
+        </View>
+      </View>
+    );
+  }
+
   // Écran de saisie de l'enquêteur (équivalent Vue.js)
   if (currentStep === 'enqueteur') {
     return (
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.welcomeContainer}>
           <Text style={styles.title}>Sondage Mobilité Gare d'Auray</Text>
-          <Text style={styles.enqueteurLabel}>Prénom enquêteur :</Text>
+          <Text style={styles.enqueteurLabel}>
+            {savedEnqueteur ? 'Modifier le prénom enquêteur :' : 'Prénom enquêteur :'}
+          </Text>
           <TextInput
             style={styles.enqueteurInput}
             value={enqueteurInput}
@@ -147,7 +214,9 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
           />
           {enqueteurInput.trim() && (
             <TouchableOpacity style={styles.nextButton} onPress={setEnqueteur}>
-              <Text style={styles.nextButtonText}>Suivant</Text>
+              <Text style={styles.nextButtonText}>
+                {savedEnqueteur ? 'Mettre à jour' : 'Suivant'}
+              </Text>
             </TouchableOpacity>
           )}
         </ScrollView>
@@ -161,6 +230,29 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.welcomeContainer}>
           <Text style={styles.title}>{surveyConfig.title}</Text>
+          
+          {/* Affichage du nom d'enquêteur avec possibilité de changement */}
+          <View style={styles.enqueteurDisplay}>
+            <Text style={styles.enqueteurDisplayLabel}>Enquêteur :</Text>
+            <Text style={styles.enqueteurDisplayName}>{savedEnqueteur}</Text>
+            <TouchableOpacity 
+              style={styles.changeNameButton} 
+              onPress={changeEnqueteur}
+              onLongPress={() => {
+                Alert.alert(
+                  "Effacer le nom sauvegardé",
+                  "Voulez-vous complètement effacer le nom d'enquêteur sauvegardé ?",
+                  [
+                    { text: "Annuler", style: "cancel" },
+                    { text: "Effacer", style: "destructive", onPress: clearSavedEnqueteur }
+                  ]
+                );
+              }}
+            >
+              <Text style={styles.changeNameButtonText}>Changer</Text>
+            </TouchableOpacity>
+          </View>
+
           <Text style={styles.welcomeText}>{surveyConfig.welcomeMessage}</Text>
           <TouchableOpacity style={styles.startButton} onPress={startSurvey}>
             <Text style={styles.startButtonText}>Commencer le sondage</Text>
@@ -303,6 +395,40 @@ const styles = StyleSheet.create({
   nextButtonText: {
     color: 'white',
     fontSize: 18,
+    fontWeight: 'bold',
+  },
+  enqueteurDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#3d4f73',
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 8,
+  },
+  enqueteurDisplayLabel: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginRight: 8,
+  },
+  enqueteurDisplayName: {
+    color: '#4a90e2',
+    fontSize: 16,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  changeNameButton: {
+    backgroundColor: '#666',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  changeNameButtonText: {
+    color: 'white',
+    fontSize: 14,
     fontWeight: 'bold',
   },
   header: {
