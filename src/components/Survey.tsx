@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, TextInput } from 'react-native';
 import { surveyQuestions, surveyConfig } from '../data/surveyQuestions';
 import { saveSurveyResponse } from '../config/firebaseConfig';
 import { SurveyQuestion, SurveyAnswers, SurveyNavigation } from '../types/survey';
@@ -13,6 +13,12 @@ interface SurveyProps {
 }
 
 const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
+  // État du sondage équivalent au Vue.js
+  const [currentStep, setCurrentStep] = useState<'enqueteur' | 'welcome' | 'survey'>('enqueteur');
+  const [enqueteurInput, setEnqueteurInput] = useState('');
+  const [savedEnqueteur, setSavedEnqueteur] = useState('');
+  const [startTime, setStartTime] = useState<Date | null>(null);
+
   const [navigation, setNavigation] = useState<SurveyNavigation>({
     currentQuestionId: surveyConfig.startQuestionId,
     history: [],
@@ -20,7 +26,6 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(true);
 
   // Trouver la question actuelle
   const currentQuestion = useMemo(() => {
@@ -58,11 +63,24 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
     });
   };
 
+  // Fonction pour définir l'enquêteur (équivalent Vue.js)
+  const setEnqueteur = () => {
+    if (enqueteurInput.trim() !== "") {
+      setSavedEnqueteur(enqueteurInput.trim());
+      setCurrentStep('welcome');
+      setStartTime(new Date()); // Capture du temps de début
+    } else {
+      Alert.alert("Erreur", "Veuillez entrer le prénom de l'enquêteur.");
+    }
+  };
+
   // Finaliser le sondage
   const handleSurveyComplete = async (finalAnswers: SurveyAnswers) => {
     setIsSubmitting(true);
     try {
-      await saveSurveyResponse(finalAnswers);
+      // Capture de l'enquêteur pour éviter la perte lors des opérations async
+      const capturedEnqueteur = savedEnqueteur;
+      await saveSurveyResponse(finalAnswers, capturedEnqueteur, startTime || undefined);
       Alert.alert(
         'Merci !',
         'Votre participation au sondage a été enregistrée avec succès.',
@@ -107,13 +125,38 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
     }
   };
 
-  // Commencer le sondage
+  // Commencer le sondage (depuis l'écran de bienvenue)
   const startSurvey = () => {
-    setShowWelcome(false);
+    setCurrentStep('survey');
   };
 
+  // Écran de saisie de l'enquêteur (équivalent Vue.js)
+  if (currentStep === 'enqueteur') {
+    return (
+      <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.welcomeContainer}>
+          <Text style={styles.title}>Sondage Mobilité Gare d'Auray</Text>
+          <Text style={styles.enqueteurLabel}>Prénom enquêteur :</Text>
+          <TextInput
+            style={styles.enqueteurInput}
+            value={enqueteurInput}
+            onChangeText={setEnqueteurInput}
+            placeholder="Entrez votre prénom"
+            placeholderTextColor="#8a9bb8"
+            autoCapitalize="words"
+          />
+          {enqueteurInput.trim() && (
+            <TouchableOpacity style={styles.nextButton} onPress={setEnqueteur}>
+              <Text style={styles.nextButtonText}>Suivant</Text>
+            </TouchableOpacity>
+          )}
+        </ScrollView>
+      </View>
+    );
+  }
+
   // Écran de bienvenue
-  if (showWelcome) {
+  if (currentStep === 'welcome') {
     return (
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.welcomeContainer}>
@@ -230,6 +273,34 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
   },
   startButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  enqueteurLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  enqueteurInput: {
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 8,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    fontSize: 16,
+    color: '#2a3b63',
+  },
+  nextButton: {
+    backgroundColor: '#4a90e2',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 20,
+  },
+  nextButtonText: {
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',

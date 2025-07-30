@@ -26,6 +26,18 @@ export interface SurveyNavigation {
   answers: SurveyAnswers;
 }
 
+// Interface pour les données du sondage incluant l'enquêteur
+export interface SurveyData {
+  ID_questionnaire?: string;
+  firebase_timestamp?: string;
+  HEURE_DEBUT?: string;
+  DATE?: string;
+  JOUR?: string;
+  HEURE_FIN?: string;
+  ENQUETEUR: string;
+  responses: SurveyAnswers;
+}
+
 // Types pour les données de référence
 export interface Street {
   name: string;

@@ -11,6 +11,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   const [responses, setResponses] = useState<SurveyResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedResponse, setSelectedResponse] = useState<SurveyResponse | null>(null);
+  const [surveysByEnqueteur, setSurveysByEnqueteur] = useState<{[key: string]: number}>({});
 
   // Charger les réponses
   const loadResponses = async () => {
@@ -18,6 +19,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     try {
       const data = await getAllResponses();
       setResponses(data);
+      
+      // Grouper les sondages par enquêteur (équivalent Vue.js)
+      const surveysByEnqueteurMap = data.reduce((acc: {[key: string]: number}, survey) => {
+        const enqueteurName = survey.ENQUETEUR || 'Inconnu';
+        acc[enqueteurName] = (acc[enqueteurName] || 0) + 1;
+        return acc;
+      }, {});
+      setSurveysByEnqueteur(surveysByEnqueteurMap);
     } catch (error) {
       Alert.alert('Erreur', 'Impossible de charger les réponses');
     } finally {
@@ -75,6 +84,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
         <Text style={styles.responseDate}>
           Date: {selectedResponse.timestamp?.toDate?.()?.toLocaleString() || 'Date inconnue'}
         </Text>
+        
+        {selectedResponse.ENQUETEUR && (
+          <Text style={styles.responseDate}>
+            Enquêteur: {selectedResponse.ENQUETEUR}
+          </Text>
+        )}
 
         <FlatList
           data={Object.entries(selectedResponse.responses)}
@@ -100,6 +115,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
       <View style={styles.header}>
         <Text style={styles.title}>Réponses du sondage</Text>
         <Text style={styles.subtitle}>({responses.length} réponses)</Text>
+        
+        {/* Statistiques par enquêteur */}
+        {Object.keys(surveysByEnqueteur).length > 0 && (
+          <View style={styles.enqueteurStats}>
+            <Text style={styles.enqueteurStatsTitle}>Sondages par enquêteur :</Text>
+            {Object.entries(surveysByEnqueteur).map(([name, count]) => (
+              <Text key={name} style={styles.enqueteurStatItem}>
+                {name}: {count} sondage{count > 1 ? 's' : ''}
+              </Text>
+            ))}
+          </View>
+        )}
       </View>
 
       <View style={styles.actions}>
@@ -176,6 +203,23 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#8a9bb8',
+  },
+  enqueteurStats: {
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: '#3d4f73',
+    borderRadius: 8,
+  },
+  enqueteurStatsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 8,
+  },
+  enqueteurStatItem: {
+    fontSize: 14,
+    color: '#8a9bb8',
+    marginBottom: 4,
   },
   actions: {
     flexDirection: 'row',
