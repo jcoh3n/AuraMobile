@@ -8,6 +8,7 @@ import SingleChoiceQuestion from './SingleChoiceQuestion';
 import TextInputQuestion from './TextInputQuestion';
 import GareQuestion from './GareQuestion';
 import CommuneQuestion from './CommuneQuestion';
+import StreetQuestion from './StreetQuestion';
 
 interface SurveyProps {
   onComplete?: () => void;
@@ -317,6 +318,12 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
           />
         ) : currentQuestion.type === 'commune' ? (
           <CommuneQuestion
+            question={currentQuestion}
+            onAnswer={handleAnswer}
+            initialValue={navigation.answers[currentQuestion.id] || ''}
+          />
+        ) : currentQuestion.type === 'street' ? (
+          <StreetQuestion
             question={currentQuestion}
             onAnswer={handleAnswer}
             initialValue={navigation.answers[currentQuestion.id] || ''}
