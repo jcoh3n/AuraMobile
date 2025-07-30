@@ -5,6 +5,8 @@ import { saveSurveyResponse } from '../config/firebaseConfig';
 import { SurveyQuestion, SurveyAnswers, SurveyNavigation } from '../types/survey';
 import SingleChoiceQuestion from './SingleChoiceQuestion';
 import TextInputQuestion from './TextInputQuestion';
+import GareQuestion from './GareQuestion';
+import CommuneQuestion from './CommuneQuestion';
 
 interface SurveyProps {
   onComplete?: () => void;
@@ -171,6 +173,18 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
             question={currentQuestion}
             onAnswer={handleAnswer}
             selectedValue={navigation.answers[currentQuestion.id]}
+          />
+        ) : currentQuestion.type === 'gare' ? (
+          <GareQuestion
+            question={currentQuestion}
+            onAnswer={handleAnswer}
+            initialValue={navigation.answers[currentQuestion.id] || ''}
+          />
+        ) : currentQuestion.type === 'commune' ? (
+          <CommuneQuestion
+            question={currentQuestion}
+            onAnswer={handleAnswer}
+            initialValue={navigation.answers[currentQuestion.id] || ''}
           />
         ) : (
           <TextInputQuestion
