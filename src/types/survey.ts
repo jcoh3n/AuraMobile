@@ -14,6 +14,16 @@ export interface SurveyQuestion {
   required?: boolean;
 }
 
+// Type pour la configuration des images des questions
+export interface QuestionImage {
+  image: string;
+  imageAlt: string;
+}
+
+export interface QuestionImagesConfig {
+  [questionId: string]: QuestionImage;
+}
+
 // Types pour les réponses
 export interface SurveyAnswers {
   [questionId: string]: any;

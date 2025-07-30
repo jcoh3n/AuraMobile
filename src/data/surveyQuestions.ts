@@ -278,4 +278,31 @@ export const surveyConfig = {
     welcomeMessage,
     startQuestionId: 'Q1',
     firebaseCollection: 'Auray'
+};
+
+// Configuration des images pour les questions
+export const questionImages = {
+    // Questions de stationnement de véhicules
+    "Q3A_MONTANTS_TRAIN": {
+        image: '/plan.png',
+        imageAlt: 'Plan de la gare montrant les zones de stationnement'
+    },
+    // Questions de stationnement vélo/trottinette  
+    "Q3D_MONTANTS_TRAIN": {
+        image: '/plan.png',
+        imageAlt: 'Plan de la gare montrant les zones de stationnement vélo'
+    },
+    // Exemples d'autres questions avec images (décommentez si besoin) :
+    // "Q3A_ACCOMPAGNATEURS": {
+    //     image: '/plan.png',
+    //     imageAlt: 'Plan de la gare montrant les zones de stationnement'
+    // },
+    // "Q1": {
+    //     image: '/gare_overview.png',
+    //     imageAlt: 'Vue d\'ensemble de la gare d\'Auray'
+    // },
+    // "Q4_MONTANTS_TRAIN": {
+    //     image: '/destinations_map.png',
+    //     imageAlt: 'Carte des destinations depuis la gare d\'Auray'
+    // }
 }; 
