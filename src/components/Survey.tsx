@@ -156,8 +156,13 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
     <View style={styles.container}>
       {/* Header avec bouton retour */}
       <View style={styles.header}>
-        {navigation.history.length > 0 && (
+        {navigation.history.length > 0 ? (
           <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+            <Text style={styles.backButtonText}>← Retour</Text>
+          </TouchableOpacity>
+        ) : (
+          // Bouton retour vers l'écran d'accueil pour Q1
+          <TouchableOpacity style={styles.backButton} onPress={() => setShowWelcome(true)}>
             <Text style={styles.backButtonText}>← Retour</Text>
           </TouchableOpacity>
         )}
