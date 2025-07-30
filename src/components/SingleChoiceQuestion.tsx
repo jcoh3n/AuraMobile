@@ -45,43 +45,50 @@ const SingleChoiceQuestion: React.FC<SingleChoiceQuestionProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.questionText}>{question.text}</Text>
-      
-      {imageConfig && (
-        <View style={styles.imageContainer}>
-          <TouchableOpacity onPress={openImageModal} activeOpacity={0.8}>
-            <Image
-              source={getImageSource(imageConfig.image)}
-              style={styles.questionImage}
-              resizeMode="contain"
-              accessibilityLabel={imageConfig.imageAlt}
-            />
-            <View style={styles.zoomHint}>
-              <Text style={styles.zoomHintText}>🔍 Appuyez pour agrandir</Text>
-            </View>
-          </TouchableOpacity>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+        bounces={true}
+      >
+        <Text style={styles.questionText}>{question.text}</Text>
+        
+        {imageConfig && (
+          <View style={styles.imageContainer}>
+            <TouchableOpacity onPress={openImageModal} activeOpacity={0.8}>
+              <Image
+                source={getImageSource(imageConfig.image)}
+                style={styles.questionImage}
+                resizeMode="contain"
+                accessibilityLabel={imageConfig.imageAlt}
+              />
+              <View style={styles.zoomHint}>
+                <Text style={styles.zoomHintText}>🔍 Appuyez pour agrandir</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+        
+        <View style={styles.optionsContainer}>
+          {question.options?.map((option: SurveyOption) => (
+            <TouchableOpacity
+              key={option.id}
+              style={[
+                styles.optionButton,
+                selectedValue === option.id && styles.selectedOption
+              ]}
+              onPress={() => onAnswer(option.id)}
+            >
+              <Text style={[
+                styles.optionText,
+                selectedValue === option.id && styles.selectedOptionText
+              ]}>
+                {option.text}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      )}
-      
-      <View style={styles.optionsContainer}>
-        {question.options?.map((option: SurveyOption) => (
-          <TouchableOpacity
-            key={option.id}
-            style={[
-              styles.optionButton,
-              selectedValue === option.id && styles.selectedOption
-            ]}
-            onPress={() => onAnswer(option.id)}
-          >
-            <Text style={[
-              styles.optionText,
-              selectedValue === option.id && styles.selectedOptionText
-            ]}>
-              {option.text}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      </ScrollView>
 
       {/* Modal pour l'affichage en zoom de l'image */}
       <Modal
@@ -137,8 +144,14 @@ const SingleChoiceQuestion: React.FC<SingleChoiceQuestionProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: '#2a3b63',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40, // Espace supplémentaire en bas pour éviter que le dernier élément soit coupé
   },
   questionText: {
     fontSize: 18,
@@ -178,7 +191,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   optionsContainer: {
-    flex: 1,
+    // Supprimer flex: 1 car maintenant c'est dans un ScrollView
   },
   optionButton: {
     backgroundColor: '#3d4f73',
