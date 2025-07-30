@@ -1,295 +1,372 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, ActivityIndicator } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  TextInput, 
+  Alert, 
+  ActivityIndicator, 
+  Modal, 
+  ScrollView,
+  Dimensions
+} from 'react-native';
 import { getAllResponses, SurveyResponse } from '../config/firebaseConfig';
-import { surveyQuestions } from '../data/surveyQuestions';
 
 interface AdminDashboardProps {
   onClose?: () => void;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
-  const [responses, setResponses] = useState<SurveyResponse[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [selectedResponse, setSelectedResponse] = useState<SurveyResponse | null>(null);
+interface SurveysByEnqueteur {
+  [key: string]: number;
+}
 
-  // Charger les réponses
-  const loadResponses = async () => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
+  const [showSignInModal, setShowSignInModal] = useState(false);
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  const [password, setPassword] = useState('');
+  const [surveysByEnqueteur, setSurveysByEnqueteur] = useState<SurveysByEnqueteur>({});
+  const [totalSurveys, setTotalSurveys] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  const signIn = () => {
+    if (password === 'admin123') {
+      setShowSignInModal(false);
+      fetchAdminData();
+      setShowAdminDashboard(true);
+      setPassword(''); // Clear password
+    } else {
+      Alert.alert('Erreur', 'Mot de passe incorrect');
+    }
+  };
+
+  const fetchAdminData = async () => {
     setLoading(true);
     try {
-      const data = await getAllResponses();
-      setResponses(data);
+      const responses = await getAllResponses();
+      setTotalSurveys(responses.length);
+
+      // Calculate surveys by enquêteur
+      const surveyCount: SurveysByEnqueteur = {};
+      responses.forEach((response) => {
+        // Look for ENQUETEUR field in responses or use a default
+        const enqueteur = response.responses?.ENQUETEUR || 'Non spécifié';
+        surveyCount[enqueteur] = (surveyCount[enqueteur] || 0) + 1;
+      });
+      
+      setSurveysByEnqueteur(surveyCount);
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible de charger les réponses');
+      console.error('Erreur lors de la récupération des données:', error);
+      Alert.alert('Erreur', 'Impossible de charger les données');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadResponses();
-  }, []);
-
-  // Trouver le texte d'une question par son ID
-  const getQuestionText = (questionId: string): string => {
-    const question = surveyQuestions.find(q => q.id === questionId);
-    return question?.text || questionId;
-  };
-
-  // Trouver le texte d'une option pour une question à choix multiple
-  const getOptionText = (questionId: string, optionId: number): string => {
-    const question = surveyQuestions.find(q => q.id === questionId);
-    if (question?.options) {
-      const option = question.options.find(opt => opt.id === optionId);
-      return option?.text || `Option ${optionId}`;
+  const downloadData = async () => {
+    try {
+      Alert.alert(
+        'Téléchargement', 
+        'La fonctionnalité de téléchargement sera bientôt disponible sur mobile',
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Error downloading data:', error);
+      Alert.alert('Erreur', 'Erreur lors du téléchargement');
     }
-    return `${optionId}`;
   };
 
-  // Formater une réponse pour l'affichage
-  const formatAnswer = (questionId: string, answer: any): string => {
-    const question = surveyQuestions.find(q => q.id === questionId);
-    
-    if (question?.type === 'singleChoice' && typeof answer === 'number') {
-      return getOptionText(questionId, answer);
-    }
-    
-    return String(answer);
-  };
-
-  // Afficher les détails d'une réponse
-  const renderResponseDetails = () => {
-    if (!selectedResponse) return null;
-
-    return (
-      <View style={styles.detailsContainer}>
-        <View style={styles.detailsHeader}>
-          <Text style={styles.detailsTitle}>Détails de la réponse</Text>
-          <TouchableOpacity 
+  // Sign In Modal Component
+  const renderSignInModal = () => (
+    <Modal
+      visible={showSignInModal}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={() => setShowSignInModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, styles.signinModal]}>
+          <TouchableOpacity
             style={styles.closeButton}
-            onPress={() => setSelectedResponse(null)}
+            onPress={() => setShowSignInModal(false)}
           >
-            <Text style={styles.closeButtonText}>✕</Text>
+            <Text style={styles.closeButtonText}>×</Text>
+          </TouchableOpacity>
+          
+          <Text style={styles.modalTitle}>Connexion Admin</Text>
+          
+          <TextInput
+            style={styles.formControl}
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Entrez le mot de passe"
+            placeholderTextColor="rgba(255, 255, 255, 0.6)"
+            secureTextEntry
+          />
+          
+          <TouchableOpacity style={styles.btnSignin} onPress={signIn}>
+            <Text style={styles.btnSigninText}>Se connecter</Text>
           </TouchableOpacity>
         </View>
-        
-        <Text style={styles.responseDate}>
-          Date: {selectedResponse.timestamp?.toDate?.()?.toLocaleString() || 'Date inconnue'}
-        </Text>
+      </View>
+    </Modal>
+  );
 
-        <FlatList
-          data={Object.entries(selectedResponse.responses)}
-          keyExtractor={([questionId]) => questionId}
-          renderItem={({ item: [questionId, answer] }) => (
-            <View style={styles.responseItem}>
-              <Text style={styles.questionTitle}>
-                {getQuestionText(questionId)}
-              </Text>
-              <Text style={styles.answerText}>
-                {formatAnswer(questionId, answer)}
-              </Text>
+  // Admin Dashboard Modal Component
+  const renderAdminDashboardModal = () => (
+    <Modal
+      visible={showAdminDashboard}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={() => setShowAdminDashboard(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, styles.adminDashboardModal]}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setShowAdminDashboard(false)}
+          >
+            <Text style={styles.closeButtonText}>×</Text>
+          </TouchableOpacity>
+          
+          <Text style={styles.modalTitle}>Tableau de Bord Admin</Text>
+          
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#68d391" />
             </View>
+          ) : (
+            <ScrollView style={styles.dashboardContent}>
+              {/* Total Surveys Card */}
+              <View style={[styles.dashboardCard, styles.totalCard]}>
+                <Text style={styles.cardTitle}>Total des Enquêtes</Text>
+                <Text style={styles.bigNumber}>{totalSurveys}</Text>
+              </View>
+
+              {/* Surveys by Enquêteur Card */}
+              <View style={styles.dashboardCard}>
+                <Text style={styles.cardTitle}>Enquêtes par Enquêteur</Text>
+                <ScrollView style={styles.enqueteurList} nestedScrollEnabled>
+                  {Object.entries(surveysByEnqueteur).map(([name, count]) => (
+                    <View key={name} style={styles.listItem}>
+                      <Text style={styles.enqueteurName}>{name}</Text>
+                      <Text style={styles.count}>{count}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            </ScrollView>
           )}
-        />
-      </View>
-    );
-  };
-
-  // Afficher la liste des réponses
-  const renderResponsesList = () => (
-    <View style={styles.listContainer}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Réponses du sondage</Text>
-        <Text style={styles.subtitle}>({responses.length} réponses)</Text>
-      </View>
-
-      <View style={styles.actions}>
-        <TouchableOpacity style={styles.refreshButton} onPress={loadResponses}>
-          <Text style={styles.refreshButtonText}>Actualiser</Text>
-        </TouchableOpacity>
-        
-        {onClose && (
-          <TouchableOpacity style={styles.closeMainButton} onPress={onClose}>
-            <Text style={styles.closeMainButtonText}>Fermer</Text>
+          
+          <TouchableOpacity style={styles.btnDownload} onPress={downloadData}>
+            <Text style={styles.btnDownloadText}>Télécharger les Données</Text>
           </TouchableOpacity>
-        )}
-      </View>
-
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4a90e2" />
-          <Text style={styles.loadingText}>Chargement...</Text>
         </View>
-      ) : (
-        <FlatList
-          data={responses}
-          keyExtractor={(item) => item.id || Math.random().toString()}
-          renderItem={({ item, index }) => (
-            <TouchableOpacity
-              style={styles.responseCard}
-              onPress={() => setSelectedResponse(item)}
-            >
-              <Text style={styles.responseCardTitle}>
-                Réponse #{index + 1}
-              </Text>
-              <Text style={styles.responseCardDate}>
-                {item.timestamp?.toDate?.()?.toLocaleDateString() || 'Date inconnue'}
-              </Text>
-              <Text style={styles.responseCardPreview}>
-                {Object.keys(item.responses).length} questions répondues
-              </Text>
-            </TouchableOpacity>
-          )}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>Aucune réponse disponible</Text>
-          }
-        />
-      )}
-    </View>
+      </View>
+    </Modal>
   );
 
   return (
     <View style={styles.container}>
-      {selectedResponse ? renderResponseDetails() : renderResponsesList()}
+      {/* Main Sign In Button */}
+      <TouchableOpacity
+        style={styles.mainSigninButton}
+        onPress={() => setShowSignInModal(true)}
+      >
+        <Text style={styles.mainSigninButtonText}>Connexion Admin</Text>
+      </TouchableOpacity>
+
+      {/* Close Button if onClose is provided */}
+      {onClose && (
+        <TouchableOpacity style={styles.closeMainButton} onPress={onClose}>
+          <Text style={styles.closeMainButtonText}>Fermer</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Modals */}
+      {renderSignInModal()}
+      {renderAdminDashboardModal()}
     </View>
   );
 };
+
+const { width: screenWidth } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#2a3b63',
-  },
-  listContainer: {
-    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: 20,
+  mainSigninButton: {
+    backgroundColor: 'rgba(45, 55, 72, 0.4)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 15,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#8a9bb8',
-  },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  refreshButton: {
-    backgroundColor: '#4a90e2',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 6,
-    flex: 1,
-    marginRight: 10,
-    alignItems: 'center',
-  },
-  refreshButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
+  mainSigninButtonText: {
+    color: '#9ca3af',
+    fontSize: 10,
+    fontWeight: '400',
+    textTransform: 'lowercase',
+    letterSpacing: 1,
   },
   closeMainButton: {
     backgroundColor: '#666',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 6,
-    alignItems: 'center',
   },
   closeMainButtonText: {
     color: 'white',
     fontWeight: 'bold',
   },
-  loadingContainer: {
+  modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingText: {
-    color: 'white',
-    marginTop: 10,
+  modalContent: {
+    backgroundColor: '#2d3748',
+    padding: 25,
+    borderRadius: 15,
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 8,
   },
-  responseCard: {
-    backgroundColor: '#3d4f73',
-    padding: 16,
-    marginVertical: 8,
-    borderRadius: 8,
+  signinModal: {
+    width: Math.min(320, screenWidth * 0.9),
+    padding: 15,
   },
-  responseCardTitle: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  responseCardDate: {
-    color: '#8a9bb8',
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  responseCardPreview: {
-    color: '#8a9bb8',
-    fontSize: 14,
-  },
-  emptyText: {
-    color: 'white',
-    textAlign: 'center',
-    fontSize: 16,
-    marginTop: 40,
-  },
-  detailsContainer: {
-    flex: 1,
-    padding: 20,
-  },
-  detailsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  detailsTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
+  adminDashboardModal: {
+    width: Math.min(350, screenWidth * 0.9),
+    maxHeight: '80%',
+    padding: 15,
   },
   closeButton: {
-    backgroundColor: '#666',
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    position: 'absolute',
+    right: 15,
+    top: 15,
+    width: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 1,
   },
   closeButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 20,
+    fontWeight: 'bold',
   },
-  responseDate: {
-    color: '#8a9bb8',
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'normal',
+    color: 'white',
+    textAlign: 'center',
+    marginBottom: 15,
+    marginTop: 10,
+  },
+  formControl: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    color: 'white',
+    padding: 12,
     fontSize: 14,
-    marginBottom: 20,
-  },
-  responseItem: {
-    backgroundColor: '#3d4f73',
-    padding: 16,
-    marginVertical: 8,
     borderRadius: 8,
+    marginBottom: 15,
+    height: 48,
   },
-  questionTitle: {
+  btnSignin: {
+    backgroundColor: '#68d391',
+    padding: 12,
+    borderRadius: 8,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#68d391',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  btnSigninText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  dashboardContent: {
+    maxHeight: 300,
+    marginBottom: 8,
+  },
+  dashboardCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 8,
+  },
+  totalCard: {
+    alignItems: 'center',
+    padding: 8,
+  },
+  cardTitle: {
+    fontSize: 14,
+    color: '#3b82f6',
+    fontWeight: 'normal',
+    marginBottom: 4,
+  },
+  bigNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#68d391',
+    margin: 2,
+  },
+  enqueteurList: {
+    maxHeight: 150,
+  },
+  listItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  enqueteurName: {
+    color: 'white',
+    fontSize: 14,
+    flex: 1,
+  },
+  count: {
+    color: '#68d391',
+    fontSize: 14,
+    fontWeight: 'normal',
+  },
+  btnDownload: {
+    backgroundColor: '#3b82f6',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  btnDownloadText: {
     color: 'white',
     fontSize: 14,
     fontWeight: 'bold',
-    marginBottom: 8,
   },
-  answerText: {
-    color: '#8a9bb8',
-    fontSize: 14,
-    lineHeight: 20,
+  loadingContainer: {
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
