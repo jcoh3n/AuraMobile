@@ -1,97 +1,133 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# 🚄 Auray Mobilité - Application Android
 
-# Getting Started
+Application React Native de sondage de mobilité ferroviaire pour la gare d'Auray.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## 📱 Applications générées
 
-## Step 1: Start Metro
+### APK disponibles :
+- **`AurayMobilite-Release.apk`** (49 MB) - Version optimisée pour la distribution
+- **`AurayMobilite-Debug.apk`** (103 MB) - Version de développement avec outils de debug
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## 🎯 Fonctionnalités
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+### ✅ **Sondage interactif**
+- Questions conditionnelles avec logique de navigation
+- Interface intuitive adaptée mobile
+- Validation des réponses en temps réel
+- Sauvegarde automatique dans Firebase
 
-```sh
-# Using npm
-npm start
+### ✅ **Types de questions supportées**
+- **Choix unique** : Questions à options multiples
+- **Saisie libre** : Texte, communes, rues, gares
+- **Navigation conditionnelle** : Questions suivantes basées sur les réponses
 
-# OR using Yarn
-yarn start
+### ✅ **Interface d'administration**
+- Consultation de toutes les réponses
+- Détails complets de chaque participation
+- Tri par date et filtrage
+- Export des données (via Firebase Console)
+
+### ✅ **Intégration Firebase**
+- Sauvegarde en temps réel
+- Base de données sécurisée
+- Synchronisation automatique
+- Compatible avec l'application Vue.js existante
+
+## 🚀 Installation
+
+### Sur Android :
+1. **Activer les sources inconnues** dans les paramètres Android
+2. **Télécharger** `AurayMobilite-Release.apk`
+3. **Installer** l'APK
+4. **Lancer** l'application
+
+### Compatibilité :
+- Android 7.0+ (API 24+)
+- 50 MB d'espace libre
+- Connexion Internet requise
+
+## 📊 Structure des données
+
+### Questions du sondage :
+- **Q1** : Raison de présence en gare
+- **Section Train** : Origine, transport, stationnement, destination
+- **Section Car** : Origine, transport, destination  
+- **Section Accompagnateurs** : Origine, transport
+
+### Base de données :
+- **Collection Firebase** : `Auray`
+- **Format** : JSON avec timestamp
+- **Compatible** avec l'application Vue.js existante
+
+## 🛠️ Développement
+
+### Prérequis installés :
+```bash
+- React Native CLI
+- Firebase SDK
+- Android Studio & SDK
+- Node.js & npm
 ```
 
-## Step 2: Build and run your app
+### Commandes utiles :
+```bash
+# Installer les dépendances
+npm install
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+# Lancer en mode développement
+npx react-native run-android
 
-### Android
+# Construire l'APK release
+cd android && ./gradlew assembleRelease
 
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+# Construire l'APK debug  
+cd android && ./gradlew assembleDebug
 ```
 
-### iOS
+## 🔧 Configuration
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+### Firebase :
+- Projet : `reims-dc6cc`
+- Collection : `Auray`
+- Configuration dans : `src/config/firebaseConfig.ts`
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+### Personnalisation :
+- Questions : `src/data/surveyQuestions.ts`
+- Styles : Chaque composant a ses styles intégrés
+- Theme : Couleurs dans le fichier de styles
 
-```sh
-bundle install
-```
+## 📈 Migration depuis Vue.js
 
-Then, and every time you update your native dependencies, run:
+### ✅ **Fonctionnalités migrées :**
+- ✅ Toutes les questions du sondage
+- ✅ Logique de navigation conditionnelle
+- ✅ Intégration Firebase identique
+- ✅ Interface d'administration
+- ✅ Validation des réponses
+- ✅ Gestion des erreurs
 
-```sh
-bundle exec pod install
-```
+### 🎨 **Améliorations React Native :**
+- Interface mobile native optimisée
+- Performances améliorées
+- Expérience utilisateur fluide
+- Navigation tactile intuitive
+- Compatibilité hors-ligne partielle
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+## 👥 Partenaires
 
-```sh
-# Using npm
-npm run ios
+**Ville d'Auray • AQTA • Région Bretagne • SNCF**
 
-# OR using Yarn
-yarn ios
-```
+---
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+## 🎉 **Mission accomplie !**
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+Votre application Vue.js a été **entièrement migrée vers React Native** et l'APK Android est prêt à être distribué !
 
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+### 📦 **Livrables :**
+- ✅ Application React Native complète
+- ✅ APK Release (49 MB) prêt pour distribution
+- ✅ APK Debug (103 MB) pour tests
+- ✅ Interface d'administration fonctionnelle
+- ✅ Intégration Firebase identique à Vue.js
+- ✅ Toutes les fonctionnalités du sondage
+- ✅ Documentation complète

@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "720898924669",
+    "project_id": "reims-dc6cc",
+    "storage_bucket": "reims-dc6cc.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:720898924669:android:ac020edfd3f23523b5d114",
+        "android_client_info": {
+          "package_name": "com.auraymobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "720898924669-example.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0aBkzbzJyV6yUKJkkBBw7YJw_MgpKLyc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "720898924669-example.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+} 
