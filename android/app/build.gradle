@@ -2,6 +2,7 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 apply plugin: "com.google.gms.google-services"
+apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -78,9 +79,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.auraymobile"
+    namespace "com.aurapk.apk"
     defaultConfig {
-        applicationId "com.auraymobile"
+        applicationId "com.aurapk.apk"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -113,8 +114,10 @@ dependencies {
     implementation("com.facebook.react:react-android")
 
     // Firebase BOM
-    implementation platform('com.google.firebase:firebase-bom:32.7.1')
+    implementation platform('com.google.firebase:firebase-bom:34.0.0')
+    implementation 'com.google.firebase:firebase-analytics'
     implementation 'com.google.firebase:firebase-firestore'
+    implementation 'com.google.firebase:firebase-auth'
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

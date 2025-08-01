@@ -1,39 +1,29 @@
 {
   "project_info": {
-    "project_number": "720898924669",
-    "project_id": "reims-dc6cc",
-    "storage_bucket": "reims-dc6cc.appspot.com"
+    "project_number": "770448485282",
+    "project_id": "aurapk-326eb",
+    "storage_bucket": "aurapk-326eb.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:720898924669:android:ac020edfd3f23523b5d114",
+        "mobilesdk_app_id": "1:770448485282:android:233a8cb78edc8d88e4e0fb",
         "android_client_info": {
-          "package_name": "com.auraymobile"
+          "package_name": "com.aurapk.apk"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "720898924669-example.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyC0aBkzbzJyV6yUKJkkBBw7YJw_MgpKLyc"
+          "current_key": "AIzaSyAXaRwv_Uue4BmPR9YI5Idtsag9HnhFhGg"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "720898924669-example.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }
   ],
   "configuration_version": "1"
-} 
+}

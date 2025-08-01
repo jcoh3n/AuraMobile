@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar, SafeAreaView } from 'react-native';
 import Survey from './src/components/Survey';
-import AdminDashboard from './src/components/AdminDashboard';
+import AuthenticatedAdminDashboard from './src/components/AuthenticatedAdminDashboard';
 
 type AppMode = 'survey' | 'admin' | 'home';
 
@@ -24,7 +24,7 @@ function App() {
       
       case 'admin':
         return (
-          <AdminDashboard 
+          <AuthenticatedAdminDashboard 
             onClose={() => setCurrentMode('home')}
           />
         );

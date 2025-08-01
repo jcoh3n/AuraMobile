@@ -1,5 +1,5 @@
-import firestore, { 
-  getFirestore, 
+import { 
+  getFirestore,
   collection, 
   addDoc, 
   getDocs, 
@@ -8,9 +8,19 @@ import firestore, {
   serverTimestamp,
   FirebaseFirestoreTypes 
 } from '@react-native-firebase/firestore';
+import { 
+  getAuth,
+  signInWithEmailAndPassword,
+  signOut as authSignOut,
+  onAuthStateChanged as authStateChanged,
+  FirebaseAuthTypes 
+} from '@react-native-firebase/auth';
+import { getApp } from '@react-native-firebase/app';
 
-// Configuration Firebase (même que Vue.js)
-export const db = getFirestore();
+// Configuration Firebase using v22 modular API
+const app = getApp();
+export const db = getFirestore(app);
+export const firebaseAuth = getAuth(app);
 
 // Types pour les réponses du sondage
 export interface SurveyResponse {
@@ -86,4 +96,31 @@ export const getAllResponses = async (): Promise<SurveyResponse[]> => {
     console.error('Erreur lors de la récupération:', error);
     throw error;
   }
+};
+
+// Authentication functions using modular API
+export const signInWithEmail = async (email: string, password: string): Promise<FirebaseAuthTypes.UserCredential> => {
+  try {
+    return await signInWithEmailAndPassword(firebaseAuth, email, password);
+  } catch (error) {
+    console.error('Erreur lors de la connexion:', error);
+    throw error;
+  }
+};
+
+export const signOut = async (): Promise<void> => {
+  try {
+    await authSignOut(firebaseAuth);
+  } catch (error) {
+    console.error('Erreur lors de la déconnexion:', error);
+    throw error;
+  }
+};
+
+export const getCurrentUser = (): FirebaseAuthTypes.User | null => {
+  return firebaseAuth.currentUser;
+};
+
+export const onAuthStateChanged = (callback: (user: FirebaseAuthTypes.User | null) => void) => {
+  return authStateChanged(firebaseAuth, callback);
 }; 
