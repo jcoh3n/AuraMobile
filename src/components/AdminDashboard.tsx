@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, ActivityIndicator } from 'react-native';
-import { getAllResponses, SurveyResponse } from '../config/firebaseConfig';
+import { getAllResponses, SurveyResponse, FIREBASE_COLLECTION } from '../config/firebaseConfig';
 import { surveyQuestions } from '../data/surveyQuestions';
+import XLSX from 'xlsx';
+import RNFS from 'react-native-fs';
+import Share from 'react-native-share';
 
 interface AdminDashboardProps {
   onClose?: () => void;
@@ -63,6 +66,169 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     }
     
     return String(answer);
+  };
+
+  // Download Excel data function - exact replica from Vue.js admin.vue
+  const downloadData = async () => {
+    try {
+      const rawData = responses.map((response: SurveyResponse) => {
+        const flattenedData: any = {
+          ...response.responses,
+          firestore_id: response.id,
+          ID_questionnaire: response.ID_questionnaire,
+          firebase_timestamp: response.firebase_timestamp,
+          HEURE_DEBUT: response.HEURE_DEBUT,
+          DATE: response.DATE,
+          JOUR: response.JOUR,
+          HEURE_FIN: response.HEURE_FIN,
+          ENQUETEUR: response.ENQUETEUR
+        };
+        return flattenedData;
+      });
+
+      console.log("Raw survey data from Firestore:", rawData);
+
+      // Define core headers that should appear first and in this order
+      const coreHeaders = [
+        "ID_questionnaire",
+        "ENQUETEUR",
+        "DATE",
+        "JOUR",
+        "HEURE_DEBUT",
+        "HEURE_FIN",
+      ];
+
+      // Add "POSTE_TRAVAIL" to excludedKeys to prevent it from appearing as a separate column
+      const excludedKeys = ["firestore_id", "firebase_timestamp", "S1", "POSTE_TRAVAIL"];
+      const surveyQuestionOrder = surveyQuestions.map(q => q.id);
+      const posteTravailActualId = "POSTE"; // As specified by user
+
+      let allKeys = new Set<string>();
+      rawData.forEach(docData => {
+        Object.keys(docData).forEach(key => {
+          if (!excludedKeys.includes(key)) {
+            allKeys.add(key);
+          }
+        });
+      });
+
+      // Build the header order
+      let orderedHeaders = [...coreHeaders];
+      
+      // Add the "POSTE" question (if it exists in data and is the designated one)
+      if (allKeys.has(posteTravailActualId) && !orderedHeaders.includes(posteTravailActualId)) {
+        orderedHeaders.push(posteTravailActualId);
+      }
+
+      // Add remaining survey questions in their defined order, excluding already added "POSTE"
+      surveyQuestionOrder.forEach(questionId => {
+        if (allKeys.has(questionId) && !orderedHeaders.includes(questionId) && !excludedKeys.includes(questionId)) {
+          orderedHeaders.push(questionId);
+          
+          // Add related commune fields immediately after
+          const codeInseeField = `${questionId}_CODE_INSEE`;
+          const communeLibreField = `${questionId}_COMMUNE_LIBRE`;
+          if (allKeys.has(codeInseeField) && !orderedHeaders.includes(codeInseeField)) {
+            orderedHeaders.push(codeInseeField);
+          }
+          if (allKeys.has(communeLibreField) && !orderedHeaders.includes(communeLibreField)) {
+            orderedHeaders.push(communeLibreField);
+          }
+        }
+      });
+
+      // Add any other keys that might exist but weren't in core or surveyQuestionOrder
+      const remainingKeys = Array.from(allKeys).filter(
+        key => !orderedHeaders.includes(key) && !excludedKeys.includes(key)
+      ).sort();
+      orderedHeaders = [...orderedHeaders, ...remainingKeys];
+      
+      // Final header list for the sheet
+      const finalHeaderOrder = orderedHeaders;
+
+      const data = rawData.map((docData) => {
+        const processedData: any = {};
+        finalHeaderOrder.forEach(header => {
+          if (!excludedKeys.includes(header)) {
+            let value = docData[header] !== undefined ? docData[header] : "";
+            if (Array.isArray(value)) {
+              value = value.join(", ");
+            }
+            processedData[header] = value;
+          }
+        });
+        return processedData;
+      });
+
+      console.log("Processed data for Excel:", data);
+      console.log("Final Header Order for Excel:", finalHeaderOrder);
+
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(data, { header: finalHeaderOrder });
+
+      const colWidths = finalHeaderOrder.map(() => ({ wch: 20 }));
+      worksheet["!cols"] = colWidths;
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Survey Data");
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const filename = `${FIREBASE_COLLECTION}_Survey_Data_${timestamp}.xlsx`;
+      
+      // Write the file using React Native File System
+      const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+      const file = RNFS.DocumentDirectoryPath + '/' + filename;
+      
+      // Write file as base64
+      await RNFS.writeFile(file, wbout, 'base64');
+      console.log('File written to:', file);
+      
+      // Verify file exists and get info
+      const fileExists = await RNFS.exists(file);
+      if (!fileExists) {
+        throw new Error('Le fichier n\'a pas pu être créé');
+      }
+      
+      const fileInfo = await RNFS.stat(file);
+      console.log('File info:', fileInfo);
+      
+      // Try multiple sharing approaches for better compatibility
+      try {
+        // First attempt: use url property
+        await Share.open({
+          title: 'Export des données du sondage',
+          message: 'Fichier Excel généré avec les données du sondage',
+          url: file,
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          filename: filename,
+        });
+      } catch (shareError) {
+        console.log('First share method failed, trying alternative:', shareError);
+        
+        // Second attempt: use urls array
+        try {
+          await Share.open({
+            title: 'Export des données du sondage',
+            message: 'Fichier Excel généré avec les données du sondage',
+            urls: [file],
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            filename: filename,
+          });
+        } catch (secondShareError) {
+          console.log('Second share method failed, trying third:', secondShareError);
+          
+          // Third attempt: simple file share
+          await Share.open({
+            url: file,
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          });
+        }
+      }
+      
+      Alert.alert('Succès', 'Le fichier Excel a été généré et partagé avec succès');
+      console.log("File generated and shared successfully");
+    } catch (error) {
+      console.error("Error downloading data:", error);
+      Alert.alert('Erreur', 'Erreur lors de la génération du fichier Excel');
+    }
   };
 
   // Afficher les détails d'une réponse
@@ -132,6 +298,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
       <View style={styles.actions}>
         <TouchableOpacity style={styles.refreshButton} onPress={loadResponses}>
           <Text style={styles.refreshButtonText}>Actualiser</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.downloadButton} onPress={downloadData}>
+          <Text style={styles.downloadButtonText}>Télécharger Excel</Text>
         </TouchableOpacity>
         
         {onClose && (
@@ -225,30 +395,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 20,
+    gap: 10,
   },
   refreshButton: {
     backgroundColor: '#4a90e2',
-    paddingHorizontal: 20,
+    paddingHorizontal: 15,
     paddingVertical: 10,
     borderRadius: 6,
     flex: 1,
-    marginRight: 10,
     alignItems: 'center',
   },
   refreshButtonText: {
     color: 'white',
     fontWeight: 'bold',
+    fontSize: 14,
+  },
+  downloadButton: {
+    backgroundColor: '#28a745',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 6,
+    flex: 1,
+    alignItems: 'center',
+  },
+  downloadButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   closeMainButton: {
     backgroundColor: '#666',
-    paddingHorizontal: 20,
+    paddingHorizontal: 15,
     paddingVertical: 10,
     borderRadius: 6,
+    flex: 1,
     alignItems: 'center',
   },
   closeMainButtonText: {
     color: 'white',
     fontWeight: 'bold',
+    fontSize: 14,
   },
   loadingContainer: {
     flex: 1,
