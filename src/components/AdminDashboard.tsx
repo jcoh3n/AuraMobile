@@ -173,9 +173,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const filename = `${FIREBASE_COLLECTION}_Survey_Data_${timestamp}.xlsx`;
       
-      // Write the file using React Native File System
+      // Write the file using React Native File System to external downloads directory
       const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
-      const file = RNFS.DocumentDirectoryPath + '/' + filename;
+      const file = RNFS.DownloadDirectoryPath + '/' + filename;
       
       // Write file as base64
       await RNFS.writeFile(file, wbout, 'base64');
@@ -190,37 +190,57 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
       const fileInfo = await RNFS.stat(file);
       console.log('File info:', fileInfo);
       
-      // Try multiple sharing approaches for better compatibility
+      // Try sharing the file with proper content URI
       try {
-        // First attempt: use url property
-        await Share.open({
+        // First attempt: share with full options
+        const shareOptions = {
           title: 'Export des données du sondage',
-          message: 'Fichier Excel généré avec les données du sondage',
-          url: file,
+          message: `Fichier Excel généré: ${filename}`,
+          url: `file://${file}`,
           type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          filename: filename,
-        });
-      } catch (shareError) {
-        console.log('First share method failed, trying alternative:', shareError);
+        };
         
-        // Second attempt: use urls array
-        try {
-          await Share.open({
-            title: 'Export des données du sondage',
-            message: 'Fichier Excel généré avec les données du sondage',
-            urls: [file],
-            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            filename: filename,
-          });
-        } catch (secondShareError) {
-          console.log('Second share method failed, trying third:', secondShareError);
-          
-          // Third attempt: simple file share
-          await Share.open({
-            url: file,
-            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          });
+        console.log('Attempting to share with options:', shareOptions);
+        const result = await Share.open(shareOptions);
+        console.log('Share result:', result);
+        
+        // Check if user actually shared or just dismissed
+        if (result && result.success === false && result.message && result.message.includes('User did not share')) {
+          // User cancelled sharing - this is normal behavior
+          Alert.alert(
+            'Fichier sauvegardé', 
+            `Le fichier Excel a été sauvegardé dans le dossier Téléchargements:\n\n${filename}\n\nVous pouvez le trouver dans votre gestionnaire de fichiers ou réessayer de le partager.`,
+            [{ text: 'OK' }]
+          );
+          return;
         }
+        
+      } catch (shareError: any) {
+        console.log('Share failed, but file saved to:', file);
+        console.error('Share error:', shareError);
+        
+        // Check if it's just user cancellation
+        if (shareError && (
+          shareError.message?.includes('User did not share') || 
+          shareError.message?.includes('cancelled') ||
+          shareError.message?.includes('dismissed')
+        )) {
+          // User cancelled - this is normal, just inform them the file is saved
+          Alert.alert(
+            'Fichier sauvegardé', 
+            `Le fichier Excel a été sauvegardé dans le dossier Téléchargements:\n\n${filename}\n\nVous pouvez le trouver dans votre gestionnaire de fichiers.`,
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        
+        // Real error - fallback message
+        Alert.alert(
+          'Fichier sauvegardé', 
+          `Le partage a échoué, mais le fichier Excel a été sauvegardé dans le dossier Téléchargements:\n\n${filename}\n\nVous pouvez le trouver dans votre gestionnaire de fichiers.`,
+          [{ text: 'OK' }]
+        );
+        return;
       }
       
       Alert.alert('Succès', 'Le fichier Excel a été généré et partagé avec succès');
