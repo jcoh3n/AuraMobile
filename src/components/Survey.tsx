@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, TextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { surveyQuestions, surveyConfig } from '../data/surveyQuestions';
-import { saveSurveyResponse } from '../config/firebaseConfig';
+import OfflineManager from '../services/OfflineManager';
+import OfflineStatusBar from './OfflineStatusBar';
 import { SurveyQuestion, SurveyAnswers, SurveyNavigation } from '../types/survey';
 import SingleChoiceQuestion from './SingleChoiceQuestion';
 import TextInputQuestion from './TextInputQuestion';
@@ -135,21 +136,53 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
     try {
       // Capture de l'enquêteur pour éviter la perte lors des opérations async
       const capturedEnqueteur = savedEnqueteur;
-      await saveSurveyResponse(finalAnswers, capturedEnqueteur, startTime || undefined);
-      Alert.alert(
-        'Merci !',
-        'Votre participation au sondage a été enregistrée avec succès.',
-        [
-          {
-            text: 'OK',
-            onPress: () => onComplete?.()
-          }
-        ]
+      
+      // Utiliser OfflineManager au lieu de saveSurveyResponse directement
+      const offlineManager = OfflineManager.getInstance();
+      const result = await offlineManager.saveSurvey(
+        finalAnswers, 
+        capturedEnqueteur, 
+        startTime || undefined
       );
+      
+      if (result.success) {
+        const title = result.savedOffline ? 'Sondage sauvegardé !' : 'Merci !';
+        const message = result.savedOffline 
+          ? 'Votre sondage a été sauvegardé localement et sera synchronisé dès que la connexion sera rétablie.'
+          : 'Votre participation au sondage a été enregistrée avec succès.';
+
+        Alert.alert(
+          title,
+          message,
+          [
+            {
+              text: 'OK',
+              onPress: () => onComplete?.()
+            }
+          ]
+        );
+      } else {
+        // Erreur de sauvegarde
+        Alert.alert(
+          'Erreur',
+          result.message || 'Une erreur est survenue lors de l\'enregistrement.',
+          [
+            {
+              text: 'Réessayer',
+              onPress: () => handleSurveyComplete(finalAnswers)
+            },
+            {
+              text: 'Annuler',
+              style: 'cancel'
+            }
+          ]
+        );
+      }
     } catch (error) {
+      console.error('Erreur lors de la finalisation du sondage:', error);
       Alert.alert(
         'Erreur',
-        'Une erreur est survenue lors de l\'enregistrement. Veuillez réessayer.',
+        'Une erreur inattendue est survenue. Veuillez réessayer.',
         [
           {
             text: 'Réessayer',
@@ -211,6 +244,7 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
   if (currentStep === 'enqueteur') {
     return (
       <View style={styles.container}>
+        <OfflineStatusBar />
         <ScrollView contentContainerStyle={styles.welcomeContainer}>
           <Text style={styles.title}>Sondage Mobilité Gare d'Auray</Text>
           <Text style={styles.enqueteurLabel}>
@@ -240,6 +274,7 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
   if (currentStep === 'welcome') {
     return (
       <View style={styles.container}>
+        <OfflineStatusBar />
         <ScrollView contentContainerStyle={styles.welcomeContainer}>
           <Text style={styles.title}>{surveyConfig.title}</Text>
           
@@ -301,6 +336,7 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
 
   return (
     <View style={styles.container}>
+      <OfflineStatusBar />
       {/* Header avec bouton retour */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={handleBackButton}>

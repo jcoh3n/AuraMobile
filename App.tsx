@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar, SafeAreaView } from 'react-native';
 import Survey from './src/components/Survey';
 import AuthenticatedAdminDashboard from './src/components/AuthenticatedAdminDashboard';
+import OfflineStatusBar from './src/components/OfflineStatusBar';
 
 type AppMode = 'survey' | 'admin' | 'home';
 
@@ -32,6 +33,7 @@ function App() {
       default:
         return (
           <View style={styles.homeContainer}>
+            <OfflineStatusBar style={{ marginBottom: 20 }} />
             <View style={styles.logoContainer}>
               <Text style={styles.logoText}>🚄</Text>
               <Text style={styles.appTitle}>Sondage Mobilité</Text>
