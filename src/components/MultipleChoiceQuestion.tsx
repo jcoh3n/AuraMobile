@@ -95,9 +95,10 @@ const styles = StyleSheet.create({
   },
   questionText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#2c3e50',
+    fontWeight: 'bold',
+    color: 'white',
     marginBottom: 20,
+    textAlign: 'center',
     lineHeight: 24,
   },
   optionsContainer: {
