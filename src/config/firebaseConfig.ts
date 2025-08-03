@@ -94,12 +94,67 @@ export const getAllResponses = async (): Promise<SurveyResponse[]> => {
   try {
     const q = query(collection(db, FIREBASE_COLLECTION), orderBy('timestamp', 'desc'));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
+    return snapshot.docs.map((doc: FirebaseFirestoreTypes.QueryDocumentSnapshot) => ({
       id: doc.id,
       ...doc.data(),
     })) as SurveyResponse[];
   } catch (error) {
     console.error('Erreur lors de la récupération:', error);
+    throw error;
+  }
+};
+
+// Interface pour les statistiques des enquêtes
+export interface SurveyStats {
+  totalSurveys: number;
+  surveysByEnqueteur: { [key: string]: number };
+  lastUpdateDate: string;
+}
+
+// Fonction optimisée pour récupérer uniquement les statistiques des enquêtes
+export const getSurveyStats = async (): Promise<SurveyStats> => {
+  try {
+    const q = query(collection(db, FIREBASE_COLLECTION));
+    const snapshot = await getDocs(q);
+    
+    const surveysByEnqueteur: { [key: string]: number } = {};
+    let totalSurveys = 0;
+    let lastTimestamp: FirebaseFirestoreTypes.Timestamp | null = null;
+    
+    snapshot.docs.forEach((doc: FirebaseFirestoreTypes.QueryDocumentSnapshot) => {
+      const data = doc.data();
+      totalSurveys++;
+      
+      // Compter par enquêteur
+      const enqueteur = data.ENQUETEUR || 'Inconnu';
+      surveysByEnqueteur[enqueteur] = (surveysByEnqueteur[enqueteur] || 0) + 1;
+      
+      // Garder la date la plus récente
+      if (data.timestamp && data.timestamp instanceof Object && 'seconds' in data.timestamp) {
+        const timestamp = data.timestamp as FirebaseFirestoreTypes.Timestamp;
+        if (!lastTimestamp || timestamp.seconds > lastTimestamp.seconds) {
+          lastTimestamp = timestamp;
+        }
+      }
+    });
+    
+    const lastUpdateDate = lastTimestamp 
+      ? (lastTimestamp as FirebaseFirestoreTypes.Timestamp).toDate().toLocaleDateString('fr-FR', {
+          day: '2-digit',
+          month: '2-digit', 
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      : 'Aucune donnée';
+    
+    return {
+      totalSurveys,
+      surveysByEnqueteur,
+      lastUpdateDate
+    };
+  } catch (error) {
+    console.error('Erreur lors de la récupération des statistiques:', error);
     throw error;
   }
 };

@@ -8,26 +8,44 @@ import {
   Alert, 
   ActivityIndicator 
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import { 
   signInWithEmail, 
-  signOut, 
-  getCurrentUser, 
   onAuthStateChanged 
 } from '../config/firebaseConfig';
 
 interface AuthWrapperProps {
   children: React.ReactNode;
+  onBack?: () => void;
 }
 
-const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
+const AuthWrapper: React.FC<AuthWrapperProps> = ({ children, onBack }) => {
   const [user, setUser] = useState<FirebaseAuthTypes.User | null>(null);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   useEffect(() => {
+    const initializeAuth = async () => {
+      // Récupérer l'email sauvegardé
+      try {
+        const savedEmail = await AsyncStorage.getItem('adminEmail');
+        if (savedEmail) {
+          setEmail(savedEmail);
+        }
+      } catch (error) {
+        console.log('Erreur lors de la récupération de l\'email:', error);
+      }
+    };
+
+    // Initialiser l'auth
+    initializeAuth();
+
+    // Écouter les changements d'authentification
     const unsubscribe = onAuthStateChanged((authUser) => {
       setUser(authUser);
       setLoading(false);
@@ -45,8 +63,17 @@ const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
     setIsSigningIn(true);
     try {
       await signInWithEmail(email.trim(), password);
-      setEmail('');
-      setPassword('');
+      
+      // Sauvegarder l'email si l'utilisateur le souhaite
+      if (rememberMe && email.trim()) {
+        try {
+          await AsyncStorage.setItem('adminEmail', email.trim());
+        } catch (error) {
+          console.log('Erreur lors de la sauvegarde de l\'email:', error);
+        }
+      }
+      
+      setPassword(''); // Ne vider que le mot de passe
     } catch (error: any) {
       let errorMessage = 'Erreur de connexion';
       
@@ -68,13 +95,7 @@ const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
     }
   };
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      Alert.alert('Erreur', 'Erreur lors de la déconnexion');
-    }
-  };
+
 
   if (loading) {
     return (
@@ -88,6 +109,12 @@ const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
   if (!user) {
     return (
       <View style={styles.loginContainer}>
+        {onBack && (
+          <TouchableOpacity style={styles.backButton} onPress={onBack}>
+            <Icon name="arrow-back" size={24} color="white" />
+            <Text style={styles.backButtonText}>Retour</Text>
+          </TouchableOpacity>
+        )}
         <View style={styles.loginCard}>
           <Text style={styles.loginTitle}>Connexion Administrateur</Text>
           <Text style={styles.loginSubtitle}>
@@ -116,6 +143,18 @@ const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
             autoCorrect={false}
           />
           
+          {/* Case à cocher "Se souvenir de moi" */}
+          <TouchableOpacity 
+            style={styles.rememberMeContainer}
+            onPress={() => setRememberMe(!rememberMe)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+              {rememberMe && <Icon name="check" size={16} color="white" />}
+            </View>
+            <Text style={styles.rememberMeText}>Se souvenir de mon email</Text>
+          </TouchableOpacity>
+          
           <TouchableOpacity 
             style={[styles.loginButton, isSigningIn && styles.loginButtonDisabled]}
             onPress={handleSignIn}
@@ -138,14 +177,6 @@ const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
 
   return (
     <View style={styles.authenticatedContainer}>
-      <View style={styles.authHeader}>
-        <Text style={styles.welcomeText}>
-          Connecté en tant que: {user.email}
-        </Text>
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <Text style={styles.signOutButtonText}>Déconnexion</Text>
-        </TouchableOpacity>
-      </View>
       {children}
     </View>
   );
@@ -169,6 +200,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#2a3b63',
     padding: 20,
+  },
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    zIndex: 1,
+  },
+  backButtonText: {
+    color: 'white',
+    fontSize: 16,
+    marginLeft: 8,
+    fontWeight: '500',
   },
   loginCard: {
     backgroundColor: '#3d4f73',
@@ -210,6 +259,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'white',
   },
+  rememberMeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 4,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: '#4a90e2',
+    borderRadius: 4,
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  checkboxChecked: {
+    backgroundColor: '#4a90e2',
+  },
+  rememberMeText: {
+    color: '#8a9bb8',
+    fontSize: 14,
+    fontWeight: '500',
+  },
   loginButton: {
     backgroundColor: '#4a90e2',
     paddingVertical: 14,
@@ -234,32 +308,6 @@ const styles = StyleSheet.create({
   authenticatedContainer: {
     flex: 1,
     backgroundColor: '#2a3b63',
-  },
-  authHeader: {
-    backgroundColor: '#3d4f73',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#4a90e2',
-  },
-  welcomeText: {
-    color: 'white',
-    fontSize: 14,
-    flex: 1,
-  },
-  signOutButton: {
-    backgroundColor: '#dc3545',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
-  },
-  signOutButtonText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
   },
 });
 

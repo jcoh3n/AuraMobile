@@ -1,6 +1,6 @@
 import React from 'react';
 import AuthWrapper from './AuthWrapper';
-import AdminDashboard from './AdminDashboard';
+import ModernAdminDashboard from './ModernAdminDashboard';
 
 interface AuthenticatedAdminDashboardProps {
   onClose?: () => void;
@@ -8,8 +8,8 @@ interface AuthenticatedAdminDashboardProps {
 
 const AuthenticatedAdminDashboard: React.FC<AuthenticatedAdminDashboardProps> = ({ onClose }) => {
   return (
-    <AuthWrapper>
-      <AdminDashboard onClose={onClose} />
+    <AuthWrapper onBack={onClose}>
+      <ModernAdminDashboard onClose={onClose} />
     </AuthWrapper>
   );
 };
