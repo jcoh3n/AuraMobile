@@ -3,15 +3,38 @@ export interface SurveyOption {
   id: number;
   text: string;
   next?: string;
+  next_if_selected?: string; // Navigation vers une question de précision si cette option est sélectionnée
+}
+
+// Interface pour les conditions
+export interface ConditionalRoute {
+  value: number | string;
+  next?: string;
+  text?: string;
+}
+
+export interface ConditionalLogic {
+  condition: string;
+  routes: ConditionalRoute[];
 }
 
 export interface SurveyQuestion {
   id: string;
   text: string;
-  type: 'singleChoice' | 'multipleChoice' | 'commune' | 'street' | 'gare' | 'text' | 'number';
+  type: 'singleChoice' | 'multipleChoice' | 'commune' | 'street' | 'gare' | 'station' | 'text' | 'number';
   options?: SurveyOption[];
   next?: string;
   required?: boolean;
+  
+  // Fonctionnalités avancées
+  condition?: string; // Condition pour afficher cette question
+  conditionalText?: ConditionalLogic; // Texte conditionnel basé sur les réponses précédentes
+  conditionalNext?: ConditionalLogic[]; // Navigation conditionnelle
+  fallbackNext?: string; // Navigation par défaut si les conditions ne sont pas remplies
+  
+  // Pour les questions de texte libre
+  freeTextPlaceholder?: string; // Placeholder pour les champs de texte
+  validation?: 'numeric' | 'email' | string; // Type de validation
 }
 
 // Type pour la configuration des images des questions
