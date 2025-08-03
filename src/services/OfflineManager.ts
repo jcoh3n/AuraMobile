@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import { saveSurveyResponse } from '../config/firebaseConfig';
+import { saveSurveyResponse, testFirebaseConnection } from '../config/firebaseConfig';
 
 // Clés pour AsyncStorage
 const OFFLINE_SURVEYS_KEY = '@offline_surveys';
@@ -42,9 +42,16 @@ class OfflineManager {
   private initNetworkListener() {
     NetInfo.addEventListener(state => {
       const wasOffline = !this.isOnline;
-      this.isOnline = state.isConnected ?? false;
+      // Plus strict: nécessite à la fois connection ET accès internet
+      this.isOnline = (state.isConnected ?? false) && (state.isInternetReachable ?? true);
       
       console.log(`[OfflineManager] État réseau: ${this.isOnline ? 'ONLINE' : 'OFFLINE'}`);
+      console.log(`[OfflineManager] Détails réseau:`, {
+        isConnected: state.isConnected,
+        isInternetReachable: state.isInternetReachable,
+        type: state.type,
+        details: state.details
+      });
       
       // Si on vient de retrouver la connexion, tenter la synchronisation
       if (wasOffline && this.isOnline) {
@@ -81,11 +88,14 @@ class OfflineManager {
   public async getSyncStatus(): Promise<SyncStatus> {
     try {
       const storedStatus = await AsyncStorage.getItem(SYNC_STATUS_KEY);
-      const pendingSurveys = await this.getPendingSurveys();
+      const allSurveys = await this.getPendingSurveys();
+      const unsyncedSurveys = allSurveys.filter(s => !s.synced); // Only count unsynced surveys!
+      
+      console.log('[OfflineManager] 📊 Calcul statut: total=', allSurveys.length, 'non-sync=', unsyncedSurveys.length);
       
       const defaultStatus: SyncStatus = {
         isOnline: this.isOnline,
-        pendingSurveysCount: pendingSurveys.length,
+        pendingSurveysCount: unsyncedSurveys.length, // Fixed: only count unsynced
         lastSyncAttempt: storedStatus ? JSON.parse(storedStatus).lastSyncAttempt : undefined
       };
 
@@ -116,9 +126,12 @@ class OfflineManager {
 
     try {
       // Toujours sauvegarder en local d'abord
+      console.log('[OfflineManager] 💾 Sauvegarde locale du sondage...');
       await this.saveToLocal(surveyData);
+      console.log('[OfflineManager] ✅ Sauvegarde locale réussie');
 
       // Si online, tenter la synchronisation immédiate
+      console.log('[OfflineManager] 🌐 État réseau:', this.isOnline ? 'ONLINE' : 'OFFLINE');
       if (this.isOnline) {
         try {
           await saveSurveyResponse(responses, enqueteur, startTime);
@@ -127,6 +140,9 @@ class OfflineManager {
           await this.updateLocalSurvey(surveyData);
           
           console.log('[OfflineManager] Sondage sauvegardé et synchronisé immédiatement');
+          console.log('[OfflineManager] ⚠️ IMPORTANT: Retour success=true, savedOffline=FALSE (devrait montrer "Merci!")');
+          console.log('[OfflineManager] 🔄 Notification des listeners pour mise à jour du statut...');
+          await this.notifyListeners(); // CRUCIAL: Notify status bar immediately!
           return {
             success: true,
             savedOffline: false,
@@ -134,30 +150,46 @@ class OfflineManager {
           };
         } catch (syncError) {
           console.error('[OfflineManager] Erreur de synchronisation immédiate:', syncError);
-          // Même si la sync échoue, on a sauvegardé en local
+          console.log('[OfflineManager] État réseau détecté comme ONLINE mais sync Firebase échoue');
+          console.log('[OfflineManager] Type d\'erreur:', syncError?.message || 'Erreur inconnue');
+          
+          // Test de diagnostic Firebase pour identifier le problème
+          console.log('[OfflineManager] Lancement du test de diagnostic Firebase...');
+          try {
+            const testResult = await testFirebaseConnection();
+            console.log('[OfflineManager] Résultat test Firebase:', testResult);
+          } catch (testError) {
+            console.error('[OfflineManager] Erreur durant le test Firebase:', testError);
+          }
+          
+          // Quand online mais sync échoue, sauvegarder localement avec message clair
+          console.log('[OfflineManager] 🔄 Notification des listeners pour échec sync...');
+          await this.notifyListeners(); // CRUCIAL: Notify status bar for sync failure!
           return {
             success: true,
             savedOffline: true,
-            message: 'Sondage sauvegardé localement. Synchronisation en attente...'
+            message: 'Sondage sauvegardé localement. Problème de connexion au serveur - synchronisation automatique dès que possible.'
           };
         }
       } else {
         console.log('[OfflineManager] Mode offline - sondage sauvegardé localement');
+        console.log('[OfflineManager] 🔄 Notification des listeners pour mode offline...');
+        await this.notifyListeners(); // CRUCIAL: Notify status bar for offline save!
         return {
           success: true,
           savedOffline: true,
-          message: 'Mode offline: sondage sauvegardé localement'
+          message: 'Mode hors ligne: sondage sauvegardé localement et sera synchronisé dès que la connexion sera rétablie.'
         };
       }
     } catch (error) {
       console.error('[OfflineManager] Erreur lors de la sauvegarde:', error);
+      // Notify listeners even on error
+      await this.notifyListeners();
       return {
         success: false,
         savedOffline: false,
         message: 'Erreur lors de la sauvegarde du sondage'
       };
-    } finally {
-      this.notifyListeners();
     }
   }
 
@@ -325,6 +357,12 @@ class OfflineManager {
     } catch (error) {
       console.error('[OfflineManager] Erreur lors de la suppression des données offline:', error);
     }
+  }
+
+  // Test de diagnostic Firebase (pour debug)
+  public async testFirebaseConnection(): Promise<{ success: boolean; message: string }> {
+    console.log('[OfflineManager] Test de connexion Firebase demandé...');
+    return await testFirebaseConnection();
   }
 }
 
