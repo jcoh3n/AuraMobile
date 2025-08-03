@@ -119,8 +119,16 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
     }
   };
 
-  // Évaluer une condition simple (ex: "Q1 == 1")
+  // Évaluer une condition simple (ex: "Q1 == 1" ou "Q20" pour vérifier l'existence)
   const evaluateSimpleCondition = (condition: string, answers: SurveyAnswers): boolean => {
+    // D'abord vérifier si c'est juste un ID de question (ex: "Q20")
+    if (condition.match(/^Q\d+[A-Z_]*$/)) {
+      const answerValue = answers[condition];
+      // Retourner true si la réponse existe et n'est pas vide
+      return answerValue !== undefined && answerValue !== null && answerValue !== '';
+    }
+    
+    // Sinon, traiter comme une comparaison normale
     const match = condition.match(/(\w+)\s*(==|!=|>=|<=|>|<)\s*(.+)/);
     if (!match) return false;
     

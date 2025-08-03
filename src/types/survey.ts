@@ -21,7 +21,7 @@ export interface ConditionalLogic {
 export interface SurveyQuestion {
   id: string;
   text: string;
-  type: 'singleChoice' | 'multipleChoice' | 'commune' | 'street' | 'gare' | 'station' | 'text' | 'freeText' | 'number';
+  type: 'singleChoice' | 'multipleChoice' | 'commune' | 'street' | 'gare' | 'station' | 'text' | 'number';
   options?: SurveyOption[];
   next?: string;
   required?: boolean;

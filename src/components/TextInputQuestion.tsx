@@ -79,8 +79,7 @@ const TextInputQuestion: React.FC<TextInputQuestionProps> = ({
         return 'Gare de destination';
       case 'number':
         return 'Entrez un nombre';
-      case 'freeText':
-        return 'Votre réponse...';
+
       default:
         return 'Votre réponse';
     }
@@ -107,8 +106,8 @@ const TextInputQuestion: React.FC<TextInputQuestionProps> = ({
           onChangeText={handleTextChange}
           placeholder={getPlaceholder()}
           placeholderTextColor="#8a9bb8"
-          multiline={question.type === 'text' || question.type === 'freeText'}
-          numberOfLines={question.type === 'text' || question.type === 'freeText' ? 4 : 1}
+          multiline={question.type === 'text'}
+          numberOfLines={question.type === 'text' ? 4 : 1}
           autoCapitalize={question.validation === 'email' ? 'none' : 'sentences'}
           keyboardType={getKeyboardType()}
           returnKeyType="done"

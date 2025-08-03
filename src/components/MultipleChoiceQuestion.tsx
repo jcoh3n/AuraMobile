@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SurveyQuestion } from '../types/survey';
 
@@ -14,6 +14,11 @@ const MultipleChoiceQuestion: React.FC<MultipleChoiceQuestionProps> = ({
   selectedValues = []
 }) => {
   const [selectedOptions, setSelectedOptions] = useState<number[]>(selectedValues);
+
+  // Reset state when question changes or selectedValues prop changes
+  useEffect(() => {
+    setSelectedOptions(selectedValues);
+  }, [selectedValues, question.id]);
 
   const handleToggleOption = (optionId: number) => {
     const newSelection = selectedOptions.includes(optionId)
@@ -37,8 +42,9 @@ const MultipleChoiceQuestion: React.FC<MultipleChoiceQuestionProps> = ({
   const isSelected = (optionId: number) => selectedOptions.includes(optionId);
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Text style={styles.questionText}>{question.text}</Text>
+    <View style={styles.wrapper}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <Text style={styles.questionText}>{question.text}</Text>
       
       <View style={styles.optionsContainer}>
         {question.options?.map((option) => (
@@ -85,35 +91,42 @@ const MultipleChoiceQuestion: React.FC<MultipleChoiceQuestionProps> = ({
           Valider ({selectedOptions.length} sélectionné{selectedOptions.length > 1 ? 's' : ''})
         </Text>
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+    backgroundColor: '#2a3b63',
+  },
   container: {
     flex: 1,
+    padding: 20,
   },
   questionText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#2c3e50',
+    fontWeight: 'bold',
+    color: 'white',
     marginBottom: 20,
+    textAlign: 'center',
     lineHeight: 24,
   },
   optionsContainer: {
     marginBottom: 30,
   },
   optionButton: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
+    backgroundColor: '#3d4f73',
+    borderRadius: 8,
     padding: 16,
     marginBottom: 12,
     borderWidth: 2,
-    borderColor: '#e9ecef',
+    borderColor: '#3d4f73',
   },
   selectedOption: {
-    backgroundColor: '#e3f2fd',
-    borderColor: '#2196f3',
+    backgroundColor: '#4a90e2',
+    borderColor: '#4a90e2',
   },
   optionContent: {
     flexDirection: 'row',
@@ -124,15 +137,15 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#bdc3c7',
+    borderColor: '#8a9bb8',
     marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#2a3b63',
   },
   checkedBox: {
-    backgroundColor: '#2196f3',
-    borderColor: '#2196f3',
+    backgroundColor: '#4a90e2',
+    borderColor: '#4a90e2',
   },
   checkmark: {
     color: '#fff',
@@ -141,33 +154,33 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 16,
-    color: '#2c3e50',
+    color: 'white',
     flex: 1,
     lineHeight: 22,
   },
   selectedOptionText: {
-    color: '#1976d2',
-    fontWeight: '500',
+    color: 'white',
+    fontWeight: 'bold',
   },
   submitButton: {
-    backgroundColor: '#2196f3',
+    backgroundColor: '#4a90e2',
     paddingVertical: 16,
     paddingHorizontal: 32,
-    borderRadius: 12,
+    borderRadius: 8,
     alignItems: 'center',
     marginTop: 10,
     marginBottom: 20,
   },
   disabledButton: {
-    backgroundColor: '#bdc3c7',
+    backgroundColor: '#666',
   },
   submitButtonText: {
-    color: '#fff',
+    color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   disabledButtonText: {
-    color: '#7f8c8d',
+    color: '#999',
   },
 });
 

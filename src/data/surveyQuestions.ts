@@ -129,7 +129,7 @@ export const surveyQuestions = [
     {
         id: "Q4_PRECISION",
         text: "Veuillez préciser votre catégorie socio-professionnelle :",
-        type: 'freeText',
+        type: 'text',
         freeTextPlaceholder: "Préciser...",
         next: "Q5"
     },
@@ -240,7 +240,7 @@ export const surveyQuestions = [
     {
         id: "Q12_PRECISION",
         text: "Veuillez préciser l'autre finalité :",
-        type: 'freeText',
+        type: 'text',
         freeTextPlaceholder: "À préciser...",
         next: "Q13"
     },
@@ -268,7 +268,7 @@ export const surveyQuestions = [
     {
         id: "Q13_PRECISION",
         text: "Veuillez préciser l'autre raison :",
-        type: 'freeText',
+        type: 'text',
         freeTextPlaceholder: "Préciser...",
         next: "Q14"
     },
@@ -277,10 +277,9 @@ export const surveyQuestions = [
     {
         id: "Q14",
         text: "Quelle distance parcourez-vous à vélo dans le cadre de vos déplacements quotidiens ?",
-        type: 'freeText',
+        type: 'number',
         condition: "Q10 == 1",
         freeTextPlaceholder: "Distance en kilomètres",
-        validation: "numeric",
         next: "Q15"
     },
 
@@ -319,7 +318,7 @@ export const surveyQuestions = [
     {
         id: "Q17",
         text: "Selon vous quel(s) axe(s) devrait être créé pour compléter le réseau ?",
-        type: 'freeText',
+        type: 'text',
         freeTextPlaceholder: "ex : Coulée Verte, piste cyclable entre commune X et Commune Y...",
         next: "Q18"
     },
@@ -372,7 +371,7 @@ export const surveyQuestions = [
     {
         id: "Q20",
         text: "Quel itinéraire empruntez-vous le plus souvent à vélo ?",
-        type: 'freeText',
+        type: 'text',
         condition: "Q8 == 1 OR Q8 == 2",
         freeTextPlaceholder: "Décrire l'itinéraire...",
         next: "Q21"
@@ -383,7 +382,6 @@ export const surveyQuestions = [
         id: "Q21",
         text: "Comment évaluez-vous la qualité de cet itinéraire ?",
         type: 'singleChoice',
-        condition: "Q20",
         options: [
             { id: 1, text: "Très satisfaisant", next: "Q22" },
             { id: 2, text: "Assez satisfaisant", next: "Q22" },
@@ -409,7 +407,7 @@ export const surveyQuestions = [
     {
         id: "Q22_PRECISION",
         text: "Veuillez préciser les points noirs identifiés :",
-        type: 'freeText',
+        type: 'text',
         freeTextPlaceholder: "Décrire les zones dangereuses...",
         next: "Q23"
     },
@@ -430,7 +428,7 @@ export const surveyQuestions = [
     {
         id: "Q23_PRECISION",
         text: "Veuillez préciser votre réponse concernant le stationnement sécurisé :",
-        type: 'freeText',
+        type: 'text',
         freeTextPlaceholder: "Préciser...",
         next: "Q24"
     },
@@ -439,7 +437,7 @@ export const surveyQuestions = [
     {
         id: "Q24",
         text: "Si oui, où ?",
-        type: 'freeText',
+        type: 'text',
         condition: "Q23 == 1",
         freeTextPlaceholder: "Préciser les lieux souhaités...",
         next: "Q25",
@@ -450,7 +448,7 @@ export const surveyQuestions = [
     {
         id: "Q25",
         text: "Seriez-vous prêt(e) à utiliser davantage le vélo si l'offre était améliorée ?",
-        type: 'freeText',
+        type: 'text',
         freeTextPlaceholder: "Décrire les améliorations...",
         next: "end"
     },
