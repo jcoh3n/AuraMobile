@@ -36,6 +36,19 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingName, setIsLoadingName] = useState(true);
 
+  // Fonction pour déterminer le texte conditionnel d'une question
+  const getConditionalText = (question: SurveyQuestion, answers: SurveyAnswers): string => {
+    if (!question.conditionalText) {
+      return question.text;
+    }
+
+    const { condition, routes } = question.conditionalText;
+    const conditionValue = answers[condition];
+    
+    const matchingRoute = routes.find(route => route.value === conditionValue);
+    return matchingRoute?.text || question.text;
+  };
+
   // Trouver la question actuelle
   const currentQuestion = useMemo(() => {
     const question = surveyQuestions.find(q => q.id === navigation.currentQuestionId);
@@ -130,19 +143,6 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
       case '<': return Number(answerValue) < Number(compareValue);
       default: return false;
     }
-  };
-
-  // Fonction pour déterminer le texte conditionnel d'une question
-  const getConditionalText = (question: SurveyQuestion, answers: SurveyAnswers): string => {
-    if (!question.conditionalText) {
-      return question.text;
-    }
-
-    const { condition, routes } = question.conditionalText;
-    const conditionValue = answers[condition];
-    
-    const matchingRoute = routes.find(route => route.value === conditionValue);
-    return matchingRoute?.text || question.text;
   };
 
   // Fonction pour trouver la prochaine question valide (en vérifiant les conditions)
