@@ -4,6 +4,33 @@ import { SurveyQuestion } from '../types/survey';
 // Questions du sondage de mobilité ferroviaire d'Auray
 
 export const surveyQuestions: SurveyQuestion[] = [
+    // EXEMPLE - Question avec termination conditionnelle (âge minimum)
+    {
+        id: "AGE_CHECK",
+        text: "Quel est votre âge ?",
+        type: 'number',
+        freeTextPlaceholder: "Entrez votre âge",
+        validation: "numeric",
+        conditionalNext: [
+            {
+                condition: "AGE_CHECK",
+                routes: [
+                    { value: "< 16", next: "MINOR_END" },
+                    { value: ">= 16", next: "Q1" }
+                ]
+            }
+        ],
+        fallbackNext: "Q1"
+    },
+
+    // Fin du sondage pour les mineurs
+    {
+        id: "MINOR_END", 
+        text: "Merci pour votre intérêt, mais ce sondage est réservé aux personnes de 16 ans et plus.",
+        type: 'text',
+        next: "end"
+    },
+
     // Q1 - Raison de la présence en gare (filtre le flux du sondage)
     {
         id: "Q1",
@@ -13,8 +40,155 @@ export const surveyQuestions: SurveyQuestion[] = [
             { id: 1, text: "Je vais prendre le train", next: "Q2_MONTANTS_TRAIN" },
             { id: 2, text: "Je vais prendre un car", next: "Q2_MONTANTS_CAR" },
             { id: 3, text: "J'accompagne des voyageurs qui partent / J'attends des voyageurs qui arrivent", next: "Q2_ACCOMPAGNATEURS" },
-            { id: 4, text: "Autre raison (promenade, fréquentation commerce, descentes train vers Ville...)", next: "end" }
+            { id: 4, text: "Autre raison", next_if_selected: "Q1_AUTRE" }
         ]
+    },
+
+    // EXEMPLE - Question de précision avec freeText
+    {
+        id: "Q1_AUTRE",
+        text: "Précisez la raison de votre présence en gare :",
+        type: 'freeText',
+        freeTextPlaceholder: "Ex: promenade, commerce, visite...",
+        next: "DEMOGRAPHICS"
+    },
+
+    // ============ SECTION DÉMONSTRATION - TOUS LES TYPES DE QUESTIONS ============
+    
+    // EXEMPLE - Demographics avec multipleChoice
+    {
+        id: "DEMOGRAPHICS",
+        text: "Quelles catégories vous décrivent le mieux ? (Plusieurs réponses possibles)",
+        type: 'multipleChoice',
+        options: [
+            { id: 1, text: "Étudiant(e)" },
+            { id: 2, text: "Travailleur/se" },
+            { id: 3, text: "Retraité(e)" },
+            { id: 4, text: "À la recherche d'emploi" },
+            { id: 5, text: "Parent accompagnant" },
+            { id: 6, text: "Touriste" },
+            { id: 7, text: "Autre", next_if_selected: "DEMOGRAPHICS_OTHER" }
+        ],
+        next: "FREQUENCY"
+    },
+
+    // EXEMPLE - Question de précision pour multipleChoice
+    {
+        id: "DEMOGRAPHICS_OTHER",
+        text: "Précisez votre situation :",
+        type: 'freeText',
+        freeTextPlaceholder: "Ex: profession libérale, artisan...",
+        next: "FREQUENCY"
+    },
+
+    // EXEMPLE - Question avec condition basée sur la réponse précédente
+    {
+        id: "FREQUENCY",
+        text: "À quelle fréquence utilisez-vous cette gare ?",
+        type: 'singleChoice',
+        condition: "Q1 == 1 OR Q1 == 2", // Seulement pour ceux qui prennent le train ou car
+        options: [
+            { id: 1, text: "Tous les jours", next: "SATISFACTION" },
+            { id: 2, text: "Plusieurs fois par semaine", next: "SATISFACTION" },
+            { id: 3, text: "Une fois par semaine", next: "SATISFACTION" },
+            { id: 4, text: "Occasionnellement", next: "RARE_USAGE" },
+            { id: 5, text: "Première fois", next: "FIRST_TIME" }
+        ],
+        fallbackNext: "Q2_MONTANTS_TRAIN"
+    },
+
+    // EXEMPLE - Question conditionnelle pour usage rare 
+    {
+        id: "RARE_USAGE",
+        text: "Pour quelles occasions utilisez-vous principalement cette gare ?",
+        type: 'multipleChoice',
+        options: [
+            { id: 1, text: "Vacances" },
+            { id: 2, text: "Rendez-vous médicaux" },
+            { id: 3, text: "Visites familiales" },
+            { id: 4, text: "Loisirs/sorties" },
+            { id: 5, text: "Déplacements professionnels" }
+        ],
+        next: "SATISFACTION"
+    },
+
+    // EXEMPLE - Question pour première fois avec station selector
+    {
+        id: "FIRST_TIME",
+        text: "D'où venez-vous habituellement pour vos déplacements en transport en commun ?",
+        type: 'station',
+        next: "SATISFACTION"
+    },
+
+    // EXEMPLE - Question avec conditionalText basée sur la fréquence
+    {
+        id: "SATISFACTION",
+        text: "Question par défaut",
+        type: 'singleChoice',
+        conditionalText: {
+            condition: "FREQUENCY",
+            routes: [
+                { value: 1, text: "En tant qu'usager quotidien, comment évaluez-vous cette gare ?" },
+                { value: 2, text: "En tant qu'usager régulier, comment évaluez-vous cette gare ?" },
+                { value: 3, text: "En tant qu'usager hebdomadaire, comment évaluez-vous cette gare ?" },
+                { value: 4, text: "En tant qu'usager occasionnel, comment évaluez-vous cette gare ?" },
+                { value: 5, text: "Pour cette première visite, comment évaluez-vous cette gare ?" }
+            ]
+        },
+        options: [
+            { id: 1, text: "Très satisfait(e)", next: "CONTACT_INFO" },
+            { id: 2, text: "Satisfait(e)", next: "CONTACT_INFO" },
+            { id: 3, text: "Neutre", next: "CONTACT_INFO" },
+            { id: 4, text: "Insatisfait(e)", next: "IMPROVEMENTS" },
+            { id: 5, text: "Très insatisfait(e)", next: "IMPROVEMENTS" }
+        ]
+    },
+
+    // EXEMPLE - Question d'amélioration avec multipleChoice complexe
+    {
+        id: "IMPROVEMENTS",
+        text: "Quelles améliorations souhaiteriez-vous voir ? (Plusieurs réponses possibles)",
+        type: 'multipleChoice',
+        options: [
+            { id: 1, text: "Plus de places de parking" },
+            { id: 2, text: "Meilleurs abris vélo" },
+            { id: 3, text: "Plus d'informations voyageurs" },
+            { id: 4, text: "Amélioration de la propreté" },
+            { id: 5, text: "Meilleure accessibilité PMR" },
+            { id: 6, text: "Plus de commerces/services" },
+            { id: 7, text: "Autre amélioration", next_if_selected: "IMPROVEMENTS_OTHER" }
+        ],
+        next: "CONTACT_INFO"
+    },
+
+    // EXEMPLE - Précision pour autres améliorations
+    {
+        id: "IMPROVEMENTS_OTHER",
+        text: "Précisez les améliorations souhaitées :",
+        type: 'freeText',
+        freeTextPlaceholder: "Décrivez les améliorations que vous souhaiteriez...",
+        next: "CONTACT_INFO"
+    },
+
+    // EXEMPLE - Contact avec validation email
+    {
+        id: "CONTACT_INFO",
+        text: "Souhaitez-vous être recontacté(e) pour des études complémentaires ?",
+        type: 'singleChoice',
+        options: [
+            { id: 1, text: "Oui, voici mon email", next: "EMAIL" },
+            { id: 2, text: "Non merci", next: "Q2_MONTANTS_TRAIN" }
+        ]
+    },
+
+    // EXEMPLE - Saisie email avec validation
+    {
+        id: "EMAIL",
+        text: "Veuillez saisir votre adresse email :",
+        type: 'freeText',
+        freeTextPlaceholder: "votre.email@exemple.fr",
+        validation: "email",
+        next: "Q2_MONTANTS_TRAIN"
     },
 
     // ============ SECTION MONTANTS TRAIN ============
@@ -276,7 +450,7 @@ Auriez-vous quelques secondes à nous accorder ?
 export const surveyConfig = {
     title: 'Sondage Mobilité Gare d\'Auray',
     welcomeMessage,
-    startQuestionId: 'Q1',
+    startQuestionId: 'AGE_CHECK', // Commence par la vérification d'âge
     firebaseCollection: 'Auray'
 };
 
@@ -305,4 +479,67 @@ export const questionImages = {
     //     image: '/destinations_map.png',
     //     imageAlt: 'Carte des destinations depuis la gare d\'Auray'
     // }
-}; 
+};
+
+/*
+🎯 FONCTIONNALITÉS COMPLÈTES DU SYSTÈME DE SONDAGE - AURAY MOBILE
+
+📋 TYPES DE QUESTIONS SUPPORTÉS:
+✅ singleChoice - Questions à choix unique avec navigation
+✅ multipleChoice - Questions à choix multiples avec options diverses
+✅ freeText - Saisie de texte libre avec placeholder et validation
+✅ text - Saisie de texte simple (alias de freeText)
+✅ number - Saisie numérique avec validation
+✅ commune - Sélecteur de commune française
+✅ street - Sélecteur de nom de rue
+✅ gare - Sélecteur de gare ferroviaire
+✅ station - Sélecteur de station/arrêt de transport
+
+🔀 LOGIQUE CONDITIONNELLE AVANCÉE:
+✅ condition - Afficher une question seulement si certaines conditions sont remplies
+     Exemple: condition: "Q1 == 1 OR Q1 == 2" (affiche seulement si train ou car)
+✅ conditionalText - Changer le texte de la question selon les réponses précédentes
+     Exemple: Question différente selon l'âge ou la fréquence d'usage
+✅ conditionalNext - Router vers différentes questions selon les réponses
+     Exemple: Différents chemins selon l'âge (mineurs vs adultes)
+✅ next_if_selected - Aller vers une question de précision si une option spécifique est choisie
+     Exemple: "Autre" redirige vers une question de précision
+✅ fallbackNext - Navigation par défaut si les conditions ne sont pas remplies
+✅ Terminaison de sondage - Finir le sondage tôt pour certaines réponses (ex: mineurs)
+
+🧠 FONCTIONNALITÉS AVANCÉES:
+✅ Conditions complexes AND/OR ("AGE >= 2 AND AGE <= 3")
+✅ Navigation conditionnelle avec plusieurs critères
+✅ Questions de précision pour les options "Autre"
+✅ Validation des champs (numeric, email, etc.)
+✅ Placeholders personnalisés pour les champs de saisie
+✅ Navigation dynamique basée sur le contexte
+✅ Collections Firebase configurables
+
+📊 EXEMPLES D'UTILISATION DANS CE FICHIER:
+
+🎂 AGE_CHECK: Question numérique avec validation et terminaison conditionnelle
+📊 DEMOGRAPHICS: Question multipleChoice avec redirection vers précision
+🔄 FREQUENCY: Question conditionnelle (seulement pour train/car)
+📱 SATISFACTION: Question avec texte conditionnel selon la fréquence
+📧 EMAIL: Question avec validation email
+🚉 FIRST_TIME: Exemple d'utilisation du sélecteur de station
+
+🔄 FLUX DU SONDAGE:
+1. Vérification d'âge (avec terminaison si mineur)
+2. Question principale sur la raison de présence
+3. Section démonstration (fréquence, satisfaction, améliorations)
+4. Contact optionnel avec validation email
+5. Questions originales de mobilité (train, car, accompagnateurs)
+
+💡 COMMENT UTILISER:
+1. Créez vos questions en utilisant les types supportés
+2. Utilisez 'condition' pour les questions conditionnelles
+3. Utilisez 'next_if_selected' pour les précisions d'options "Autre"
+4. Configurez 'startQuestionId' dans surveyConfig
+5. L'app mobile s'adapte automatiquement à votre configuration
+
+🚀 CE SONDAGE DÉMONTRE TOUTES LES FONCTIONNALITÉS IMPLÉMENTÉES !
+Pour créer un nouveau sondage, remplacez simplement le contenu de surveyQuestions
+et configurez surveyConfig selon vos besoins.
+*/

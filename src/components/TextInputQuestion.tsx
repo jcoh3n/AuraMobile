@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { SurveyQuestion } from '../types/survey';
 
 interface TextInputQuestionProps {
   question: SurveyQuestion;
-  onAnswer: (value: string) => void;
+  onAnswer: (value: string | number) => void;
   initialValue?: string;
 }
 
@@ -14,14 +14,62 @@ const TextInputQuestion: React.FC<TextInputQuestionProps> = ({
   initialValue = ''
 }) => {
   const [text, setText] = useState(initialValue);
+  const [error, setError] = useState<string>('');
+
+  const validateInput = (value: string): { isValid: boolean; error: string; processedValue: string | number } => {
+    const trimmedValue = value.trim();
+    
+    if (!trimmedValue) {
+      return { isValid: false, error: 'Ce champ est requis', processedValue: trimmedValue };
+    }
+
+    // Validation numérique
+    if (question.validation === 'numeric' || question.type === 'number') {
+      const numericValue = parseFloat(trimmedValue);
+      if (isNaN(numericValue)) {
+        return { isValid: false, error: 'Veuillez entrer un nombre valide', processedValue: trimmedValue };
+      }
+      return { isValid: true, error: '', processedValue: numericValue };
+    }
+
+    // Validation email
+    if (question.validation === 'email') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedValue)) {
+        return { isValid: false, error: 'Veuillez entrer une adresse email valide', processedValue: trimmedValue };
+      }
+      return { isValid: true, error: '', processedValue: trimmedValue };
+    }
+
+    return { isValid: true, error: '', processedValue: trimmedValue };
+  };
 
   const handleSubmit = () => {
-    if (text.trim()) {
-      onAnswer(text.trim());
+    const validation = validateInput(text);
+    
+    if (validation.isValid) {
+      setError('');
+      onAnswer(validation.processedValue);
+    } else {
+      setError(validation.error);
+      Alert.alert('Erreur de validation', validation.error);
+    }
+  };
+
+  const handleTextChange = (value: string) => {
+    setText(value);
+    if (error) {
+      setError(''); // Effacer l'erreur lors de la modification
     }
   };
 
   const getPlaceholder = () => {
+    // Utiliser le placeholder personnalisé s'il existe
+    if (question.freeTextPlaceholder) {
+      return question.freeTextPlaceholder;
+    }
+
+    // Fallback sur les placeholders par défaut
     switch (question.type) {
       case 'commune':
         return 'Nom de la commune';
@@ -29,9 +77,23 @@ const TextInputQuestion: React.FC<TextInputQuestionProps> = ({
         return 'Nom de la rue';
       case 'gare':
         return 'Gare de destination';
+      case 'number':
+        return 'Entrez un nombre';
+      case 'freeText':
+        return 'Votre réponse...';
       default:
         return 'Votre réponse';
     }
+  };
+
+  const getKeyboardType = () => {
+    if (question.type === 'number' || question.validation === 'numeric') {
+      return 'numeric';
+    }
+    if (question.validation === 'email') {
+      return 'email-address';
+    }
+    return 'default';
   };
 
   return (
@@ -40,17 +102,22 @@ const TextInputQuestion: React.FC<TextInputQuestionProps> = ({
       
       <View style={styles.inputContainer}>
         <TextInput
-          style={styles.textInput}
+          style={[styles.textInput, error && styles.errorInput]}
           value={text}
-          onChangeText={setText}
+          onChangeText={handleTextChange}
           placeholder={getPlaceholder()}
           placeholderTextColor="#8a9bb8"
-          multiline={question.type === 'text'}
-          numberOfLines={question.type === 'text' ? 4 : 1}
-          autoCapitalize="words"
+          multiline={question.type === 'text' || question.type === 'freeText'}
+          numberOfLines={question.type === 'text' || question.type === 'freeText' ? 4 : 1}
+          autoCapitalize={question.validation === 'email' ? 'none' : 'sentences'}
+          keyboardType={getKeyboardType()}
           returnKeyType="done"
           onSubmitEditing={handleSubmit}
         />
+        
+        {error !== '' && (
+          <Text style={styles.errorText}>{error}</Text>
+        )}
         
         <TouchableOpacity
           style={[
@@ -116,6 +183,16 @@ const styles = StyleSheet.create({
   },
   disabledButtonText: {
     color: '#999',
+  },
+  errorInput: {
+    borderColor: '#e74c3c',
+    borderWidth: 2,
+  },
+  errorText: {
+    color: '#e74c3c',
+    fontSize: 14,
+    marginTop: 8,
+    fontWeight: '500',
   },
 });
 

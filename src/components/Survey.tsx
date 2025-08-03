@@ -6,10 +6,12 @@ import OfflineManager from '../services/OfflineManager';
 import OfflineStatusBar from './OfflineStatusBar';
 import { SurveyQuestion, SurveyAnswers, SurveyNavigation } from '../types/survey';
 import SingleChoiceQuestion from './SingleChoiceQuestion';
+import MultipleChoiceQuestion from './MultipleChoiceQuestion';
 import TextInputQuestion from './TextInputQuestion';
 import GareQuestion from './GareQuestion';
 import CommuneQuestion from './CommuneQuestion';
 import StreetQuestion from './StreetQuestion';
+import StationQuestion from './StationQuestion';
 
 interface SurveyProps {
   onComplete?: () => void;
@@ -36,8 +38,17 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
 
   // Trouver la question actuelle
   const currentQuestion = useMemo(() => {
-    return surveyQuestions.find(q => q.id === navigation.currentQuestionId);
-  }, [navigation.currentQuestionId]);
+    const question = surveyQuestions.find(q => q.id === navigation.currentQuestionId);
+    if (!question) return null;
+
+    // Appliquer le texte conditionnel si nécessaire
+    const questionWithConditionalText = {
+      ...question,
+      text: getConditionalText(question, navigation.answers)
+    };
+
+    return questionWithConditionalText;
+  }, [navigation.currentQuestionId, navigation.answers]);
 
   // Fonctions AsyncStorage pour la persistance du nom d'enquêteur
   const loadSavedEnqueteur = async () => {
@@ -68,21 +79,138 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
     loadSavedEnqueteur();
   }, []);
 
+  // Fonction utilitaire pour évaluer les conditions
+  const evaluateCondition = (condition: string, answers: SurveyAnswers): boolean => {
+    try {
+      // Parser et évaluer les conditions de manière sécurisée
+      const parts = condition.split(/\s+(AND|OR)\s+/);
+      
+      let result = evaluateSimpleCondition(parts[0].trim(), answers);
+      
+      for (let i = 1; i < parts.length; i += 2) {
+        const operator = parts[i];
+        const nextCondition = parts[i + 1];
+        const nextResult = evaluateSimpleCondition(nextCondition.trim(), answers);
+        
+        if (operator === 'AND') {
+          result = result && nextResult;
+        } else if (operator === 'OR') {
+          result = result || nextResult;
+        }
+      }
+      
+      return result;
+    } catch (error) {
+      console.warn('Erreur lors de l\'évaluation de la condition:', condition, error);
+      return false;
+    }
+  };
+
+  // Évaluer une condition simple (ex: "Q1 == 1")
+  const evaluateSimpleCondition = (condition: string, answers: SurveyAnswers): boolean => {
+    const match = condition.match(/(\w+)\s*(==|!=|>=|<=|>|<)\s*(.+)/);
+    if (!match) return false;
+    
+    const [, questionId, operator, valueStr] = match;
+    const answerValue = answers[questionId];
+    
+    let compareValue: any = valueStr.trim();
+    if (compareValue.startsWith('"') && compareValue.endsWith('"')) {
+      compareValue = compareValue.slice(1, -1);
+    } else if (!isNaN(Number(compareValue))) {
+      compareValue = Number(compareValue);
+    }
+    
+    switch (operator) {
+      case '==': return answerValue === compareValue;
+      case '!=': return answerValue !== compareValue;
+      case '>=': return Number(answerValue) >= Number(compareValue);
+      case '<=': return Number(answerValue) <= Number(compareValue);
+      case '>': return Number(answerValue) > Number(compareValue);
+      case '<': return Number(answerValue) < Number(compareValue);
+      default: return false;
+    }
+  };
+
+  // Fonction pour déterminer le texte conditionnel d'une question
+  const getConditionalText = (question: SurveyQuestion, answers: SurveyAnswers): string => {
+    if (!question.conditionalText) {
+      return question.text;
+    }
+
+    const { condition, routes } = question.conditionalText;
+    const conditionValue = answers[condition];
+    
+    const matchingRoute = routes.find(route => route.value === conditionValue);
+    return matchingRoute?.text || question.text;
+  };
+
+  // Fonction pour trouver la prochaine question valide (en vérifiant les conditions)
+  const findValidNextQuestion = (questionId: string, answers: SurveyAnswers): string | null => {
+    const question = surveyQuestions.find(q => q.id === questionId);
+    
+    if (!question) {
+      return null;
+    }
+
+    // Si la question a une condition, vérifier si elle est remplie
+    if (question.condition && !evaluateCondition(question.condition, answers)) {
+      // Si la condition n'est pas remplie, passer à la question suivante
+      const nextId = question.fallbackNext || question.next;
+      if (nextId && nextId !== 'end') {
+        return findValidNextQuestion(nextId, answers);
+      }
+      return null;
+    }
+
+    return questionId;
+  };
+
   // Gérer la réponse à une question
-  const handleAnswer = async (answer: any) => {
+  const handleAnswer = async (answer: any, selectedOptionsData?: any[]) => {
     const newAnswers = {
       ...navigation.answers,
       [navigation.currentQuestionId]: answer
     };
 
-    // Déterminer la prochaine question
+    // Déterminer la prochaine question avec logique conditionnelle avancée
     let nextQuestionId: string | undefined;
 
-    if (currentQuestion?.type === 'singleChoice') {
+    // 1. Vérifier next_if_selected pour multipleChoice
+    if (currentQuestion?.type === 'multipleChoice' && selectedOptionsData) {
+      const optionWithNext = selectedOptionsData.find(opt => opt.next_if_selected);
+      if (optionWithNext) {
+        nextQuestionId = optionWithNext.next_if_selected;
+      }
+    }
+
+    // 2. Navigation conditionnelle pour singleChoice
+    if (!nextQuestionId && currentQuestion?.type === 'singleChoice') {
       const selectedOption = currentQuestion.options?.find(opt => opt.id === answer);
-      nextQuestionId = selectedOption?.next;
-    } else {
-      nextQuestionId = currentQuestion?.next;
+      
+      // Vérifier next_if_selected d'abord
+      if (selectedOption?.next_if_selected) {
+        nextQuestionId = selectedOption.next_if_selected;
+      } else {
+        nextQuestionId = selectedOption?.next;
+      }
+    }
+
+    // 3. Logique conditionnelle avancée (conditionalNext)
+    if (!nextQuestionId && currentQuestion?.conditionalNext) {
+      for (const conditionalLogic of currentQuestion.conditionalNext) {
+        const conditionValue = newAnswers[conditionalLogic.condition];
+        const matchingRoute = conditionalLogic.routes.find(route => route.value === conditionValue);
+        if (matchingRoute?.next) {
+          nextQuestionId = matchingRoute.next;
+          break;
+        }
+      }
+    }
+
+    // 4. Navigation par défaut
+    if (!nextQuestionId) {
+      nextQuestionId = currentQuestion?.next || currentQuestion?.fallbackNext;
     }
 
     // Si c'est la fin du sondage
@@ -91,9 +219,17 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
       return;
     }
 
+    // Vérifier si la prochaine question doit être affichée (conditions)
+    const finalNextQuestionId = findValidNextQuestion(nextQuestionId, newAnswers);
+    
+    if (finalNextQuestionId === 'end' || !finalNextQuestionId) {
+      await handleSurveyComplete(newAnswers);
+      return;
+    }
+
     // Navigation vers la question suivante
     setNavigation({
-      currentQuestionId: nextQuestionId,
+      currentQuestionId: finalNextQuestionId,
       history: [...navigation.history, navigation.currentQuestionId],
       answers: newAnswers
     });
@@ -357,8 +493,20 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
             onAnswer={handleAnswer}
             selectedValue={navigation.answers[currentQuestion.id]}
           />
+        ) : currentQuestion.type === 'multipleChoice' ? (
+          <MultipleChoiceQuestion
+            question={currentQuestion}
+            onAnswer={handleAnswer}
+            selectedValues={navigation.answers[currentQuestion.id] || []}
+          />
         ) : currentQuestion.type === 'gare' ? (
           <GareQuestion
+            question={currentQuestion}
+            onAnswer={handleAnswer}
+            initialValue={navigation.answers[currentQuestion.id] || ''}
+          />
+        ) : currentQuestion.type === 'station' ? (
+          <StationQuestion
             question={currentQuestion}
             onAnswer={handleAnswer}
             initialValue={navigation.answers[currentQuestion.id] || ''}
