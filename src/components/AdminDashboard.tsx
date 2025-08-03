@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, ActivityIndicator } from 'react-native';
 import { getAllResponses, SurveyResponse, FIREBASE_COLLECTION } from '../config/firebaseConfig';
 import { surveyQuestions } from '../data/surveyQuestions';
+import OfflineManager from '../services/OfflineManager';
 import XLSX from 'xlsx';
 import RNFS from 'react-native-fs';
 import Share from 'react-native-share';
@@ -40,6 +41,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   useEffect(() => {
     loadResponses();
   }, []);
+
+  // Test de connexion Firebase (pour diagnostique)
+  const testFirebaseConnection = async () => {
+    try {
+      setLoading(true);
+      const offlineManager = OfflineManager.getInstance();
+      const result = await offlineManager.testFirebaseConnection();
+      
+      Alert.alert(
+        result.success ? 'Test réussi ✅' : 'Test échoué ❌',
+        result.message,
+        [{ text: 'OK' }]
+      );
+    } catch (error: any) {
+      Alert.alert(
+        'Erreur de test',
+        `Impossible de tester Firebase: ${error?.message || 'Erreur inconnue'}`,
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Trouver le texte d'une question par son ID
   const getQuestionText = (questionId: string): string => {
@@ -320,6 +344,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
           <Text style={styles.refreshButtonText}>Actualiser</Text>
         </TouchableOpacity>
         
+        <TouchableOpacity style={styles.testButton} onPress={testFirebaseConnection}>
+          <Text style={styles.testButtonText}>🔧 Test Firebase</Text>
+        </TouchableOpacity>
+        
         <TouchableOpacity style={styles.downloadButton} onPress={downloadData}>
           <Text style={styles.downloadButtonText}>Télécharger Excel</Text>
         </TouchableOpacity>
@@ -426,6 +454,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   refreshButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  testButton: {
+    backgroundColor: '#ff9500',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 6,
+    flex: 1,
+    alignItems: 'center',
+  },
+  testButtonText: {
     color: 'white',
     fontWeight: 'bold',
     fontSize: 14,

@@ -47,6 +47,7 @@ export const saveSurveyResponse = async (
   startTime?: Date
 ): Promise<string> => {
   try {
+    console.log('[saveSurveyResponse] 🚀 Début sauvegarde Firebase...');
     const now = new Date();
     const uniqueSurveyInstanceId = `survey_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
@@ -75,10 +76,15 @@ export const saveSurveyResponse = async (
       completed: true,
     };
 
+    console.log('[saveSurveyResponse] 📤 Tentative addDoc vers collection:', FIREBASE_COLLECTION);
     const docRef = await addDoc(collection(db, FIREBASE_COLLECTION), surveyResult);
+    console.log('[saveSurveyResponse] ✅ SUCCESS! Document créé avec ID:', docRef.id);
     return docRef.id;
-  } catch (error) {
-    console.error('Erreur lors de la sauvegarde:', error);
+  } catch (error: any) {
+    console.error('[saveSurveyResponse] ❌ ERREUR lors de la sauvegarde:', error);
+    console.error('[saveSurveyResponse] Code d\'erreur:', error?.code);
+    console.error('[saveSurveyResponse] Message d\'erreur:', error?.message);
+    console.error('[saveSurveyResponse] 🚨 Cette erreur devrait être propagée vers OfflineManager!');
     throw error;
   }
 };
@@ -123,4 +129,48 @@ export const getCurrentUser = (): FirebaseAuthTypes.User | null => {
 
 export const onAuthStateChanged = (callback: (user: FirebaseAuthTypes.User | null) => void) => {
   return authStateChanged(firebaseAuth, callback);
+};
+
+// Fonction de test pour diagnostiquer les problèmes de connexion Firebase
+export const testFirebaseConnection = async (): Promise<{ success: boolean; message: string }> => {
+  try {
+    console.log('[Firebase Test] Tentative de test de connexion Firebase...');
+    
+    // Test simple d'écriture
+    const testData = {
+      test: true,
+      timestamp: serverTimestamp(),
+      message: 'Test de connexion Firebase',
+      created: new Date().toISOString()
+    };
+    
+    const docRef = await addDoc(collection(db, 'test_connection'), testData);
+    console.log('[Firebase Test] Connexion Firebase réussie! Document ID:', docRef.id);
+    
+    return {
+      success: true,
+      message: `Connexion Firebase réussie! Document créé: ${docRef.id}`
+    };
+  } catch (error: any) {
+    console.error('[Firebase Test] Erreur de connexion Firebase:', error);
+    console.error('[Firebase Test] Code d\'erreur:', error?.code);
+    console.error('[Firebase Test] Message d\'erreur:', error?.message);
+    
+    let errorMessage = 'Erreur de connexion Firebase inconnue';
+    
+    if (error?.code === 'permission-denied') {
+      errorMessage = 'Erreur: Permissions Firestore insuffisantes. Les règles de sécurité bloquent l\'écriture.';
+    } else if (error?.code === 'unavailable') {
+      errorMessage = 'Erreur: Service Firebase indisponible. Problème de réseau ou serveur.';
+    } else if (error?.code === 'unauthenticated') {
+      errorMessage = 'Erreur: Authentification requise pour écrire dans Firestore.';
+    } else if (error?.message) {
+      errorMessage = `Erreur Firebase: ${error.message}`;
+    }
+    
+    return {
+      success: false,
+      message: errorMessage
+    };
+  }
 }; 

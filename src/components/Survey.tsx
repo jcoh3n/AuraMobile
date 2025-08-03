@@ -106,7 +106,7 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
       setSavedEnqueteur(trimmedName);
       await saveEnqueteurToStorage(trimmedName); // Sauvegarder dans AsyncStorage
       setCurrentStep('welcome');
-      setStartTime(new Date()); // Capture du temps de début
+      // Pas de capture du temps ici - sera fait au début du sondage
     } else {
       Alert.alert("Erreur", "Veuillez entrer le prénom de l'enquêteur.");
     }
@@ -116,6 +116,7 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
   const changeEnqueteur = () => {
     setCurrentStep('enqueteur');
     setEnqueteurInput(savedEnqueteur); // Pré-remplir avec le nom actuel
+    // Note: on préserve startTime - pas de reset du temps de début
   };
 
   // Fonction pour effacer complètement le nom sauvegardé (utile pour debug/admin)
@@ -145,11 +146,16 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
         startTime || undefined
       );
       
+      console.log('[Survey] ⚠️ RESULTAT REÇU:', result);
+      console.log('[Survey] success:', result.success, 'savedOffline:', result.savedOffline);
+      
       if (result.success) {
         const title = result.savedOffline ? 'Sondage sauvegardé !' : 'Merci !';
         const message = result.savedOffline 
           ? 'Votre sondage a été sauvegardé localement et sera synchronisé dès que la connexion sera rétablie.'
           : 'Votre participation au sondage a été enregistrée avec succès.';
+
+        console.log('[Survey] ⚠️ AFFICHAGE POPUP:', { title, message });
 
         Alert.alert(
           title,
@@ -226,6 +232,7 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
 
   // Commencer le sondage (depuis l'écran de bienvenue)
   const startSurvey = () => {
+    setStartTime(new Date()); // Capture du temps de début au moment où le sondage commence vraiment
     setCurrentStep('survey');
   };
 
