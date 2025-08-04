@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, ScrollView, StatusBar, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, ScrollView, Image, TextInput, StatusBar, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { FirebaseAuthTypes } from '@react-native-firebase/auth';
 
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { getSurveyStats, getAllResponses, SurveyStats, FIREBASE_COLLECTION, signOut } from '../config/firebaseConfig';
+import GlobalContainer from './GlobalContainer';
+import { getSurveyStats, getAllResponses, SurveyStats, FIREBASE_COLLECTION, signOut, signInWithEmail, onAuthStateChanged } from '../config/firebaseConfig';
 import { surveyQuestions } from '../data/surveyQuestions';
 import XLSX from 'xlsx';
 import RNFS from 'react-native-fs';
@@ -13,14 +16,85 @@ interface ModernAdminDashboardProps {
 }
 
 const ModernAdminDashboard: React.FC<ModernAdminDashboardProps> = ({ onClose }) => {
+  // États pour l'authentification
+  const [user, setUser] = useState<FirebaseAuthTypes.User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+
+  // États pour le dashboard
   const [stats, setStats] = useState<SurveyStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
-  
-  // Calculer les espaces sécurisés pour tablette Android
-  const statusBarHeight = StatusBar.currentHeight || 24;
-  const safeAreaTop = statusBarHeight + 10; // StatusBar + marge réduite
-  const safeAreaBottom = 15; // Marge réduite pour navigation bar
+
+  // Initialisation de l'authentification
+  useEffect(() => {
+    const initializeAuth = async () => {
+      // Récupérer l'email sauvegardé
+      try {
+        const savedEmail = await AsyncStorage.getItem('adminEmail');
+        if (savedEmail) {
+          setEmail(savedEmail);
+        }
+      } catch (error) {
+        console.log('Erreur lors de la récupération de l\'email:', error);
+      }
+    };
+
+    initializeAuth();
+
+    // Écouter les changements d'authentification
+    const unsubscribe = onAuthStateChanged((authUser) => {
+      setUser(authUser);
+      setAuthLoading(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  // Fonction de connexion
+  const handleSignIn = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+      return;
+    }
+
+    setIsSigningIn(true);
+    try {
+      await signInWithEmail(email.trim(), password);
+      
+      // Sauvegarder l'email si l'utilisateur le souhaite
+      if (rememberMe && email.trim()) {
+        try {
+          await AsyncStorage.setItem('adminEmail', email.trim());
+        } catch (error) {
+          console.log('Erreur lors de la sauvegarde de l\'email:', error);
+        }
+      }
+      
+      setPassword(''); // Ne vider que le mot de passe
+    } catch (error: any) {
+      let errorMessage = 'Erreur de connexion';
+      
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'Aucun utilisateur trouvé avec cet email';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Mot de passe incorrect';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Adresse email invalide';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Trop de tentatives de connexion. Réessayez plus tard';
+      } else if (error.code === 'auth/invalid-credential') {
+        errorMessage = 'Identifiants invalides';
+      }
+      
+      Alert.alert('Erreur de connexion', errorMessage);
+    } finally {
+      setIsSigningIn(false);
+    }
+  };
 
   // Fonction pour vérifier si le logo est disponible et le rendre
   const renderLogo = () => {
@@ -230,19 +304,107 @@ const ModernAdminDashboard: React.FC<ModernAdminDashboardProps> = ({ onClose }) 
   };
 
 
+  // Écran de chargement d'authentification
+  if (authLoading) {
+    return (
+      <GlobalContainer>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4a90e2" />
+          <Text style={styles.loadingText}>Chargement...</Text>
+        </View>
+      </GlobalContainer>
+    );
+  }
+
+  // Écran de connexion si non authentifié
+  if (!user) {
+    return (
+      <GlobalContainer>
+        <View style={styles.loginContainer}>
+          {onClose && (
+            <TouchableOpacity 
+              style={[styles.backButton, { top: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 10 : 50 }]} 
+              onPress={onClose}
+            >
+              <Icon name="arrow-back" size={24} color="white" />
+              <Text style={styles.backButtonText}>Retour</Text>
+            </TouchableOpacity>
+          )}
+          <View style={styles.loginCard}>
+            <Text style={styles.loginTitle}>Connexion Administrateur</Text>
+            <Text style={styles.loginSubtitle}>
+              Connectez-vous pour accéder aux résultats du sondage
+            </Text>
+            
+            <TextInput
+              style={styles.input}
+              placeholder="Adresse email"
+              placeholderTextColor="#8a9bb8"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            
+            <TextInput
+              style={styles.input}
+              placeholder="Mot de passe"
+              placeholderTextColor="#8a9bb8"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            
+            <TouchableOpacity
+              style={styles.rememberMeContainer}
+              onPress={() => setRememberMe(!rememberMe)}
+            >
+              <Icon 
+                name={rememberMe ? "check-box" : "check-box-outline-blank"} 
+                size={24} 
+                color="#4a90e2" 
+              />
+              <Text style={styles.rememberMeText}>Se souvenir de mon email</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.signInButton, isSigningIn && styles.signInButtonDisabled]}
+              onPress={handleSignIn}
+              disabled={isSigningIn}
+            >
+              {isSigningIn ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Text style={styles.signInButtonText}>Se connecter</Text>
+              )}
+            </TouchableOpacity>
+            
+            <Text style={styles.helpText}>
+              Contactez l'administrateur pour obtenir vos identifiants
+            </Text>
+          </View>
+        </View>
+      </GlobalContainer>
+    );
+  }
+
+  // Écran de chargement des statistiques
   if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={[styles.loadingContainer, { paddingTop: safeAreaTop, paddingBottom: safeAreaBottom }]}>
+      <GlobalContainer>
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#4a90e2" />
           <Text style={styles.loadingText}>Chargement des statistiques...</Text>
         </View>
-      </View>
+      </GlobalContainer>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <GlobalContainer>
       {/* Barre de statut de connexion améliorée */}
       {onClose && (
         <View style={styles.statusBar}>
@@ -357,7 +519,7 @@ const ModernAdminDashboard: React.FC<ModernAdminDashboardProps> = ({ onClose }) 
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </View>
+    </GlobalContainer>
   );
 };
 
@@ -373,7 +535,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 44,
+    paddingTop: 10,
   },
   statusBarContent: {
     flexDirection: 'row',
@@ -619,6 +781,111 @@ const styles = StyleSheet.create({
     color: '#8a9bb8',
     marginTop: 12,
     fontSize: 16,
+  },
+  // Styles pour l'écran de connexion
+  loginContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#2a3b63',
+    padding: 20,
+  },
+  backButton: {
+    position: 'absolute',
+    left: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    zIndex: 1,
+  },
+  backButtonText: {
+    color: 'white',
+    fontSize: 16,
+    marginLeft: 8,
+    fontWeight: '500',
+  },
+  loginCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 20,
+    padding: 32,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  loginTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  loginSubtitle: {
+    fontSize: 16,
+    color: '#8a9bb8',
+    marginBottom: 32,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  input: {
+    width: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    marginBottom: 16,
+    color: '#2a3b63',
+  },
+  rememberMeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginBottom: 24,
+    paddingVertical: 4,
+  },
+  rememberMeText: {
+    color: '#8a9bb8',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  signInButton: {
+    backgroundColor: '#4a90e2',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#4a90e2',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  signInButtonDisabled: {
+    backgroundColor: '#6c7b7f',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  signInButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  helpText: {
+    color: '#666',
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 16,
+    marginTop: 8,
   },
 });
 

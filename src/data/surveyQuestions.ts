@@ -466,11 +466,15 @@ Auriez-vous quelques secondes à nous accorder ?
 
 // Configuration des images pour les questions
 export const questionImages = {
+    // Question d'âge avec plan
+    "Q1": {
+        image: "/plan.png",
+        imageAlt: "Plan de référence pour l'enquête"
+    },
     // Questions de stationnement de véhicules
-    "Q3A_MONTANTS_TRAIN": "/plan.png",
-    "Q3B_DESCENDRE_TRAIN": "/plan.png",
+
     // Ajouter d'autres mappings d'images ici si nécessaire
-    // "questionId": "/image_path.png"
+    // "questionId": { image: "/image_path.png", imageAlt: "Description" }
 };
 
 // Configuration du sondage

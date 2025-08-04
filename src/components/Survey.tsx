@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { surveyQuestions, surveyConfig } from '../data/surveyQuestions';
 import OfflineManager from '../services/OfflineManager';
 import OfflineStatusBar from './OfflineStatusBar';
+import GlobalContainer from './GlobalContainer';
 import { SurveyQuestion, SurveyAnswers, SurveyNavigation } from '../types/survey';
 import SingleChoiceQuestion from './SingleChoiceQuestion';
 import MultipleChoiceQuestion from './MultipleChoiceQuestion';
@@ -383,18 +384,18 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
   // Écran de chargement au démarrage
   if (isLoadingName) {
     return (
-      <View style={styles.container}>
+      <GlobalContainer>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Chargement...</Text>
         </View>
-      </View>
+      </GlobalContainer>
     );
   }
 
   // Écran de saisie de l'enquêteur (équivalent Vue.js)
   if (currentStep === 'enqueteur') {
     return (
-      <View style={styles.container}>
+      <GlobalContainer>
         <OfflineStatusBar />
         <ScrollView contentContainerStyle={styles.welcomeContainer}>
           <Text style={styles.title}>Sondage Mobilité Gare d'Auray</Text>
@@ -417,14 +418,14 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
             </TouchableOpacity>
           )}
         </ScrollView>
-      </View>
+      </GlobalContainer>
     );
   }
 
   // Écran de bienvenue
   if (currentStep === 'welcome') {
     return (
-      <View style={styles.container}>
+      <GlobalContainer>
         <OfflineStatusBar />
         <ScrollView contentContainerStyle={styles.welcomeContainer}>
           <Text style={styles.title}>{surveyConfig.title}</Text>
@@ -456,37 +457,37 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
             <Text style={styles.startButtonText}>Commencer le sondage</Text>
           </TouchableOpacity>
         </ScrollView>
-      </View>
+      </GlobalContainer>
     );
   }
 
   // Écran de chargement
   if (isSubmitting) {
     return (
-      <View style={styles.container}>
+      <GlobalContainer>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Enregistrement en cours...</Text>
         </View>
-      </View>
+      </GlobalContainer>
     );
   }
 
   // Erreur : question non trouvée
   if (!currentQuestion) {
     return (
-      <View style={styles.container}>
+      <GlobalContainer>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Erreur : Question non trouvée</Text>
           <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
             <Text style={styles.backButtonText}>Retour</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </GlobalContainer>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <GlobalContainer>
       <OfflineStatusBar />
       {/* Header avec bouton retour */}
       <View style={styles.header}>
@@ -546,7 +547,7 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
           />
         )}
       </View>
-    </View>
+    </GlobalContainer>
   );
 };
 

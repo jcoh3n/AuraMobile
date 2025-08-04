@@ -114,6 +114,17 @@ export interface SurveyStats {
 // Fonction optimisée pour récupérer uniquement les statistiques des enquêtes
 export const getSurveyStats = async (): Promise<SurveyStats> => {
   try {
+    // Vérifier si l'utilisateur est authentifié
+    const currentUser = firebaseAuth.currentUser;
+    if (!currentUser) {
+      console.warn('Utilisateur non authentifié, impossible de récupérer les statistiques');
+      return {
+        totalSurveys: 0,
+        surveysByEnqueteur: {},
+        lastUpdateDate: 'Non authentifié'
+      };
+    }
+
     const q = query(collection(db, FIREBASE_COLLECTION));
     const snapshot = await getDocs(q);
     
@@ -153,9 +164,25 @@ export const getSurveyStats = async (): Promise<SurveyStats> => {
       surveysByEnqueteur,
       lastUpdateDate
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erreur lors de la récupération des statistiques:', error);
-    throw error;
+    
+    // Gestion spécifique des erreurs de permissions
+    if (error?.code === 'permission-denied') {
+      console.warn('Permissions Firestore insuffisantes pour les statistiques');
+      return {
+        totalSurveys: 0,
+        surveysByEnqueteur: {},
+        lastUpdateDate: 'Permissions insuffisantes'
+      };
+    }
+    
+    // Retourner des données par défaut en cas d'erreur
+    return {
+      totalSurveys: 0,
+      surveysByEnqueteur: {},
+      lastUpdateDate: 'Erreur de connexion'
+    };
   }
 };
 
