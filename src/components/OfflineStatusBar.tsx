@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated } from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
 import OfflineManager, { SyncStatus } from '../services/OfflineManager';
 
 interface OfflineStatusBarProps {
@@ -12,6 +13,7 @@ const OfflineStatusBar: React.FC<OfflineStatusBarProps> = ({ style }) => {
     pendingSurveysCount: 0
   });
   const [isSyncing, setIsSyncing] = useState(false);
+  const rotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const offlineManager = OfflineManager.getInstance();
@@ -29,6 +31,23 @@ const OfflineStatusBar: React.FC<OfflineStatusBarProps> = ({ style }) => {
       offlineManager.removeStatusListener(handleStatusChange);
     };
   }, []);
+
+  // Animation de rotation pour le sync
+  useEffect(() => {
+    if (isSyncing) {
+      const rotateAnimation = Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      );
+      rotateAnimation.start();
+      return () => rotateAnimation.stop();
+    } else {
+      rotateAnim.setValue(0);
+    }
+  }, [isSyncing, rotateAnim]);
 
   // Synchronisation manuelle
   const handleManualSync = async () => {
@@ -92,80 +111,77 @@ const OfflineStatusBar: React.FC<OfflineStatusBarProps> = ({ style }) => {
     }
   };
 
-  // Style conditionnel selon le statut
-  const getStatusStyle = () => {
-    if (!syncStatus.isOnline) {
-      return [styles.statusBar, styles.offline];
-    } else if (syncStatus.pendingSurveysCount > 0) {
-      return [styles.statusBar, styles.pending];
-    } else {
-      return [styles.statusBar, styles.online];
-    }
+
+
+  const getWifiIcon = () => {
+    if (isSyncing) return 'reload-outline';
+    return 'wifi'; // Always use wifi icon
   };
 
-  // Texte du statut
-  const getStatusText = () => {
-    if (!syncStatus.isOnline) {
-      return `📵 Mode offline • ${syncStatus.pendingSurveysCount} en attente`;
-    } else if (syncStatus.pendingSurveysCount > 0) {
-      return `🔄 ${syncStatus.pendingSurveysCount} sondage${syncStatus.pendingSurveysCount > 1 ? 's' : ''} en attente`;
-    } else {
-      return '✅ Tout synchronisé';
-    }
+  const getIconColor = () => {
+    if (isSyncing) return '#FF9800'; // Orange for syncing
+    return syncStatus.isOnline ? '#4CAF50' : '#F44336'; // Green/Red
   };
+
+
 
   return (
-    <TouchableOpacity 
-      style={[getStatusStyle(), style]} 
-      onPress={showOfflineDetails}
-      disabled={isSyncing}
-    >
-      <Text style={styles.statusText}>
-        {isSyncing ? '⏳ Synchronisation...' : getStatusText()}
-      </Text>
-      {syncStatus.pendingSurveysCount > 0 && (
-        <Text style={styles.tapHint}>Appuyez pour plus d'infos</Text>
-      )}
-    </TouchableOpacity>
+    <View style={[styles.wifiIconContainer, style]}>
+      <TouchableOpacity 
+        onPress={showOfflineDetails}
+        disabled={isSyncing}
+        activeOpacity={0.7}
+      >
+        <Animated.View
+          style={isSyncing ? {
+            transform: [{
+              rotate: rotateAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['0deg', '360deg'],
+              }),
+            }],
+          } : {}}
+        >
+          <Icon 
+            name={getWifiIcon()} 
+            size={24} 
+            color={getIconColor()}
+          />
+        </Animated.View>
+        {syncStatus.pendingSurveysCount > 0 && !isSyncing && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{syncStatus.pendingSurveysCount}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  statusBar: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginHorizontal: 16,
-    marginBottom: 8,
+  wifiIconContainer: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    zIndex: 999,
+  },
+
+  badge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#FF5722',
     borderRadius: 8,
-    alignItems: 'center',
+    minWidth: 16,
+    height: 16,
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  online: {
-    backgroundColor: '#d4edda',
-    borderColor: '#c3e6cb',
-    borderWidth: 1,
-  },
-  offline: {
-    backgroundColor: '#f8d7da',
-    borderColor: '#f5c6cb',
-    borderWidth: 1,
-  },
-  pending: {
-    backgroundColor: '#fff3cd',
-    borderColor: '#ffeaa7',
-    borderWidth: 1,
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
     textAlign: 'center',
-  },
-  tapHint: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-    fontStyle: 'italic',
   },
 });
 
