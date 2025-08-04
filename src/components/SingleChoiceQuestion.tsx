@@ -59,11 +59,11 @@ const SingleChoiceQuestion: React.FC<SingleChoiceQuestionProps> = ({
               <Image
                 source={getImageSource(imageConfig.image)}
                 style={styles.questionImage}
-                resizeMode="contain"
+                resizeMode="cover"
                 accessibilityLabel={imageConfig.imageAlt}
               />
               <View style={styles.zoomHint}>
-                <Text style={styles.zoomHintText}>🔍 Appuyez pour agrandir</Text>
+                <Text style={styles.zoomIcon}>🔍</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -107,8 +107,13 @@ const SingleChoiceQuestion: React.FC<SingleChoiceQuestionProps> = ({
               contentContainerStyle={styles.modalScrollContent}
               minimumZoomScale={1}
               maximumZoomScale={3}
+              zoomScale={1}
+              bouncesZoom={true}
+              alwaysBounceVertical={false}
+              alwaysBounceHorizontal={false}
               showsHorizontalScrollIndicator={false}
               showsVerticalScrollIndicator={false}
+              centerContent={true}
             >
               <Image
                 source={getImageSource(imageConfig?.image || '')}
@@ -162,33 +167,43 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   imageContainer: {
-    marginBottom: 20,
+    marginBottom: 25,
     alignItems: 'center',
     position: 'relative',
+    paddingHorizontal: 10,
   },
   questionImage: {
-    width: screenWidth - 40,
-    height: 220,
-    borderRadius: 12,
+    width: screenWidth - 60,
+    height: (screenWidth - 60) * 0.75, // Better aspect ratio (4:3)
+    borderRadius: 16,
+    backgroundColor: '#ffffff',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   zoomHint: {
     position: 'absolute',
     bottom: 8,
     right: 8,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 4,
   },
-  zoomHintText: {
-    color: 'white',
-    fontSize: 11,
-    fontWeight: '500',
+  zoomIcon: {
+    fontSize: 16,
+    color: '#333',
   },
   optionsContainer: {
     // Supprimer flex: 1 car maintenant c'est dans un ScrollView
@@ -228,16 +243,16 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   modalScrollContent: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 100,
+    minHeight: '100%',
   },
   modalImage: {
     width: screenWidth - 40,
-    height: '100%',
-    maxHeight: 600,
+    height: 600,
+    maxWidth: '100%',
   },
   modalHeader: {
     position: 'absolute',
