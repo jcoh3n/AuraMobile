@@ -453,9 +453,16 @@ const Survey: React.FC<SurveyProps> = ({ onComplete }) => {
           </View>
 
           <Text style={styles.welcomeText}>{surveyConfig.welcomeMessage}</Text>
-          <TouchableOpacity style={styles.startButton} onPress={startSurvey}>
-            <Text style={styles.startButtonText}>Commencer le sondage</Text>
-          </TouchableOpacity>
+          
+          <View style={styles.buttonsContainer}>
+            <TouchableOpacity style={styles.startButton} onPress={startSurvey}>
+              <Text style={styles.startButtonText}>Commencer le sondage</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.homeButton} onPress={onComplete}>
+              <Text style={styles.homeButtonText}>Retour à l'accueil</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </GlobalContainer>
     );
@@ -575,16 +582,32 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 40,
   },
+  buttonsContainer: {
+    marginHorizontal: 20,
+  },
   startButton: {
     backgroundColor: '#4a90e2',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginHorizontal: 20,
+    marginBottom: 12,
   },
   startButtonText: {
     color: 'white',
     fontSize: 18,
+    fontWeight: 'bold',
+  },
+  homeButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#8a9bb8',
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  homeButtonText: {
+    color: '#8a9bb8',
+    fontSize: 16,
     fontWeight: 'bold',
   },
   enqueteurLabel: {

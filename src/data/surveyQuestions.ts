@@ -469,7 +469,7 @@ export const questionImages = {
     // Question d'âge avec plan
     "Q1": {
         image: "/plan.png",
-        imageAlt: "Plan de référence pour l'enquête"
+        imageAlt: "Plan parking"
     },
     // Questions de stationnement de véhicules
 

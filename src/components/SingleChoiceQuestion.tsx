@@ -135,9 +135,7 @@ const SingleChoiceQuestion: React.FC<SingleChoiceQuestionProps> = ({
               <Text style={styles.modalImageDescription}>
                 {imageConfig?.imageAlt}
               </Text>
-              <Text style={styles.modalZoomHint}>
-                Pincez pour zoomer • Appuyez pour fermer
-              </Text>
+             
             </View>
           </TouchableOpacity>
         </View>
