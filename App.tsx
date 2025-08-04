@@ -33,7 +33,7 @@ function App() {
       default:
         return (
           <View style={styles.homeContainer}>
-            <OfflineStatusBar style={{ marginBottom: 20 }} />
+            <OfflineStatusBar />
             <View style={styles.logoContainer}>
               <Text style={styles.logoText}>🚄</Text>
               <Text style={styles.appTitle}>Sondage Mobilité</Text>
