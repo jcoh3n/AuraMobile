@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, SafeAreaView, Image } from 'react-native';
 import Survey from './src/components/Survey';
 import ModernAdminDashboard from './src/components/ModernAdminDashboard';
 import OfflineStatusBar from './src/components/OfflineStatusBar';
@@ -35,9 +35,15 @@ function App() {
           <View style={styles.homeContainer}>
             <OfflineStatusBar />
             <View style={styles.logoContainer}>
-              <Text style={styles.logoText}>🚄</Text>
+            
               <Text style={styles.appTitle}>Sondage Mobilité</Text>
               <Text style={styles.appSubtitle}>Gare d'Auray</Text>
+
+              <Image 
+                source={require('./public/logo.png')} 
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
 
             <View style={styles.buttonsContainer}>
@@ -85,16 +91,18 @@ const styles = StyleSheet.create({
   },
   homeContainer: {
     flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
   },
   logoContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 40,
   },
-  logoText: {
-    fontSize: 64,
+  logoImage: {
+    width: 120,
+    height: 120,
     marginBottom: 20,
   },
   appTitle: {
@@ -111,7 +119,8 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   buttonsContainer: {
-    marginBottom: 40,
+    marginBottom: 30,
+    width: '100%',
   },
   primaryButton: {
     backgroundColor: '#4a90e2',
@@ -145,7 +154,6 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: 'center',
-    paddingBottom: 20,
   },
   footerText: {
     color: '#666',
